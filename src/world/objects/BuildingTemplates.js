@@ -11,63 +11,70 @@ export class BuildingTemplates {
             tex[name] = app.renderer.generateTexture(g);
         };
 
-        draw('wall_stone_dark', g => {
-            g.beginFill(0x424242).drawRect(0, 0, s, s);
-            g.beginFill(0x212121).drawRect(0, s-4, s, 4).drawRect(0,0,2,32);
+        // Текстуры материалов (Улучшенные)
+        draw('wall_stone_brick', g => {
+            g.beginFill(0x4a4e52).drawRect(0, 0, s, s);
+            g.beginFill(0x2f3542, 0.4).drawRect(2, 2, 12, 6).drawRect(18, 10, 12, 6).drawRect(4, 20, 24, 8);
+            g.lineStyle(1, 0x000000, 0.2).drawRect(0,0,s,s);
         });
         
-        draw('roof_slate_dark', g => {
-            g.beginFill(0x263238).drawRect(0, 0, s, s);
-            g.beginFill(0x37474f).drawRect(0, 0, s, 4);
-            g.lineStyle(1, 0x1a1a1a).moveTo(0,16).lineTo(32,16);
+        draw('wall_wood_dark', g => {
+            g.beginFill(0x3e2723).drawRect(0, 0, s, s);
+            g.beginFill(0x5d4037).drawRect(4, 0, 4, s).drawRect(24, 0, 4, s); // Вертикальные балки
         });
 
-        draw('floor_royal', g => {
-            g.beginFill(0x5d4037).drawRect(0, 0, s, s);
-            g.beginFill(0xffeb3b, 0.1).drawRect(0, 0, s, 1).drawRect(0, 0, 1, s);
+        draw('roof_slate_gold', g => {
+            g.beginFill(0x2f3640).drawRect(0, 0, s, s);
+            g.beginFill(0xf1c40f, 0.2).drawPolygon([0,0, 32,0, 16,16]); // Позолота
+            g.lineStyle(1, 0x1e272e).moveTo(0,16).lineTo(32,16);
+        });
+
+        draw('floor_marble', g => {
+            g.beginFill(0xd1d8e0).drawRect(0, 0, s, s);
+            g.beginFill(0xa5b1c2, 0.3).drawRect(0, 0, 16, 16).drawRect(16, 16, 16, 16);
         });
 
         return tex;
     }
 
     static getHouseSchema(type) {
-        const schemas = {
-            'alchemist_shop': [
-                // Floor 4x4
-                {x:0,y:0,l:'f',t:'floor_royal'}, {x:1,y:0,l:'f',t:'floor_royal'}, {x:2,y:0,l:'f',t:'floor_royal'}, {x:3,y:0,l:'f',t:'floor_royal'},
-                {x:0,y:1,l:'f',t:'floor_royal'}, {x:1,y:1,l:'f',t:'floor_royal'}, {x:2,y:1,l:'f',t:'floor_royal'}, {x:3,y:1,l:'f',t:'floor_royal'},
-                {x:0,y:2,l:'f',t:'floor_royal'}, {x:1,y:2,l:'f',t:'floor_royal'}, {x:2,y:2,l:'f',t:'floor_royal'}, {x:3,y:2,l:'f',t:'floor_royal'},
-                {x:0,y:3,l:'f',t:'floor_royal'}, {x:1,y:3,l:'f',t:'floor_royal'}, {x:2,y:3,l:'f',t:'floor_royal'}, {x:3,y:3,l:'f',t:'floor_royal'},
-                // Walls
-                {x:0,y:0,l:'w',t:'wall_stone_dark'}, {x:1,y:0,l:'w',t:'wall_stone_dark'}, {x:2,y:0,l:'w',t:'wall_stone_dark'}, {x:3,y:0,l:'w',t:'wall_stone_dark'},
-                // Interior
-                {x:0,y:1,l:'d',t:'int_bookshelf'}, {x:3,y:1,l:'d',t:'int_alchemy_table'},
-                {x:1,y:1,l:'d',t:'int_carpet_red'}, {x:2,y:1,l:'d',t:'int_carpet_red'},
-                // Roof
-                {x:0,y:0,l:'r',t:'roof_slate_dark'}, {x:1,y:0,l:'r',t:'roof_slate_dark'}, {x:2,y:0,l:'r',t:'roof_slate_dark'}, {x:3,y:0,l:'r',t:'roof_slate_dark'},
-                {x:0,y:1,l:'r',t:'roof_slate_dark'}, {x:1,y:1,l:'r',t:'roof_slate_dark'}, {x:2,y:1,l:'r',t:'roof_slate_dark'}, {x:3,y:1,l:'r',t:'roof_slate_dark'},
-                {x:0,y:2,l:'r',t:'roof_slate_dark'}, {x:1,y:2,l:'r',t:'roof_slate_dark'}, {x:2,y:2,l:'r',t:'roof_slate_dark'}, {x:3,y:2,l:'r',t:'roof_slate_dark'}
-            ],
-            'town_hall': [
-                // Massive 6x6 Structure
-                {x:0,y:0,l:'f',t:'floor_royal'}, {x:5,y:5,l:'f',t:'floor_royal'}, // ... (упрощенно для примера, заполняем через цикл в коде ниже)
-                {x:0,y:0,l:'w',t:'wall_stone_dark'}, {x:5,y:0,l:'w',t:'wall_stone_dark'},
-                {x:2,y:0,l:'d',t:'int_fireplace', anim: true},
-                {x:1,y:0,l:'r',t:'roof_slate_dark'}, {x:2,y:0,l:'r',t:'roof_slate_dark'}, {x:3,y:0,l:'r',t:'roof_slate_dark'}, {x:4,y:0,l:'r',t:'roof_slate_dark'}
-            ]
+        const h = {
+            'cathedral': [], // 8x8
+            'town_hall': [],  // 6x6
+            'tavern': []      // 4x4
         };
-        
-        // Автоматическое заполнение пола для больших зданий
-        if(type === 'town_hall' && schemas[type].length < 10) {
-            for(let ix=0; ix<6; ix++) {
-                for(let iy=0; iy<6; iy++) {
-                    schemas[type].push({x:ix, y:iy, l:'f', t:'floor_royal'});
-                    if(iy === 0) schemas[type].push({x:ix, y:iy, l:'w', t:'wall_stone_dark'});
-                    if(iy < 5) schemas[type].push({x:ix, y:iy, l:'r', t:'roof_slate_dark'});
-                }
+
+        // Собор (8x8) - Эпическое здание
+        for(let x=0; x<8; x++) {
+            for(let y=0; y<8; y++) {
+                h.cathedral.push({x, y, l:'f', t:'floor_marble'});
+                if(y === 0 || (x === 0 && y < 7) || (x === 7 && y < 7)) h.cathedral.push({x, y, l:'w', t:'wall_stone_brick'});
+                if(y < 7) h.cathedral.push({x, y, l:'r', t:'roof_slate_gold'});
             }
         }
+        h.cathedral.push({x:3, y:1, l:'d', t:'int_fireplace', anim:true}, {x:4, y:1, l:'d', t:'int_fireplace', anim:true});
+        h.cathedral.push({x:1, y:3, l:'d', t:'int_carpet_red'}, {x:2, y:3, l:'d', t:'int_carpet_red'}, {x:5, y:3, l:'d', t:'int_carpet_red'});
 
-        return schemas[type] || schemas.alchemist_shop;
+        // Ратуша (6x6)
+        for(let x=0; x<6; x++) {
+            for(let y=0; y<6; y++) {
+                h.town_hall.push({x, y, l:'f', t:'floor_royal'});
+                if(y === 0) h.town_hall.push({x, y, l:'w', t:'wall_stone_dark'});
+                if(y < 5) h.town_hall.push({x, y, l:'r', t:'roof_slate_dark'});
+            }
+        }
+        h.town_hall.push({x:1, y:1, l:'d', t:'int_bookshelf'}, {x:4, y:1, l:'d', t:'int_bookshelf'});
+
+        // Таверна (4x4)
+        for(let x=0; x<4; x++) {
+            for(let y=0; y<4; y++) {
+                h.tavern.push({x, y, l:'f', t:'floor_planks'});
+                if(y === 0) h.tavern.push({x, y, l:'w', t:'wall_wood'});
+                if(y < 3) h.tavern.push({x, y, l:'r', t:'roof_tile_red'});
+            }
+        }
+        h.tavern.push({x:1, y:1, l:'d', t:'tavern_bar_counter'}, {x:2, y:2, l:'d', t:'tavern_table'});
+
+        return h[type] || h.tavern;
     }
 }

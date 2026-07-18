@@ -10,15 +10,8 @@ export class TerrainGenerator {
             moisture: new Noise(seed + 101),
             heat: new Noise(seed + 202),
             roads: new Noise(seed + 303),
-            objects: new Noise(seed + 404)
-        };
-
-        this.params = {
-            h_scale: 0.004, h_octaves: 6,
-            m_scale: 0.006,
-            t_scale: 0.003,
-            r_scale: 0.015, // Масштаб дорог
-            sea_level: 0.28, beach_level: 0.31, mountain_level: 0.72
+            objects: new Noise(seed + 404),
+            village: new Noise(seed + 505)
         };
 
         this.centerX = 500000;
@@ -37,26 +30,24 @@ export class TerrainGenerator {
     }
 
     getTileData(gx, gy) {
-        // 1. Высота и Океан
         const dx = (gx - this.centerX) / 3000, dy = (gy - this.centerY) / 3000;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        let height = this.getFractalNoise(this.noises.height, gx, gy, 5, 0.5, 2.0, this.params.h_scale);
+        
+        let height = this.getFractalNoise(this.noises.height, gx, gy, 5, 0.5, 2.0, 0.004);
         height *= Math.max(0, 1.1 - dist * dist);
 
-        // 2. Дороги (Ridge Noise)
-        const roadVal = Math.abs(this.noises.roads.perlin(gx * this.params.r_scale, gy * this.params.r_scale));
-        const isRoad = roadVal < 0.03 && height > this.params.sea_level;
+        const roadVal = Math.abs(this.noises.roads.perlin(gx * 0.015, gy * 0.015));
+        const isRoad = roadVal < 0.03 && height > 0.28;
 
-        // 3. Климат
-        let heat = this.getFractalNoise(this.noises.heat, gx, gy, 3, 0.5, 2.0, this.params.t_scale);
-        let moisture = this.getFractalNoise(this.noises.moisture, gx, gy, 3, 0.5, 2.0, this.params.m_scale);
+        let heat = this.getFractalNoise(this.noises.heat, gx, gy, 3, 0.5, 2.0, 0.003);
+        let moisture = this.getFractalNoise(this.noises.moisture, gx, gy, 3, 0.5, 2.0, 0.006);
 
         let biome = BIOMES.OCEAN;
-        if (height < this.params.sea_level) {
-            biome = height < this.params.sea_level * 0.7 ? BIOMES.DEEP_OCEAN : BIOMES.OCEAN;
-        } else if (height < this.params.beach_level) {
+        if (height < 0.28) {
+            biome = height < 0.2 ? BIOMES.DEEP_OCEAN : BIOMES.OCEAN;
+        } else if (height < 0.31) {
             biome = BIOMES.BEACH;
-        } else if (height > this.params.mountain_level) {
+        } else if (height > 0.72) {
             biome = height > 0.85 ? BIOMES.PEAKS : BIOMES.MOUNTAINS;
         } else {
             if (heat < 0.35) biome = moisture < 0.5 ? BIOMES.TUNDRA : BIOMES.SNOW;
@@ -74,18 +65,26 @@ export class TerrainGenerator {
         const distToCenter = Math.sqrt(Math.pow(gx-this.centerX, 2) + Math.pow(gy-this.centerY, 2));
         if (distToCenter < 50) biome = BIOMES.VILLAGE;
 
-        // 4. Объекты
         const objVal = (this.noises.objects.perlin(gx * 0.4, gy * 0.4) + 1) / 2;
         let structureType = null, decoType = null, isAnimated = false;
 
         if (biome.id === 'village') {
-            if (gx % 12 === 0 && gy % 12 === 0) structureType = (gx+gy)%2===0 ? 'hut' : 'blacksmith';
-            else if (objVal > 0.7) decoType = 'village_barrel';
-        } else if (height > this.params.sea_level && !isRoad) {
-            if (biome.id === 'forest' && objVal > 0.82) decoType = 'forest_tree_1';
-            if (biome.id === 'jungle' && objVal > 0.75) decoType = 'forest_tree_2';
-            if (biome.id === 'mountains' && objVal > 0.88) decoType = 'mountains_rock_1';
-            if (objVal > 0.98) { decoType = 'world_campfire'; isAnimated = true; }
+            if (gx % 15 === 0 && gy % 15 === 0) {
+                const s = Math.abs(gx+gy) % 100;
+                if (s < 40) structureType = 'hut';
+                else if (s < 70) structureType = 'blacksmith';
+                else structureType = 'tavern';
+            } else if (objVal > 0.6) {
+                const s = Math.abs(gx*gy) % 3;
+                decoType = s === 0 ? 'village_barrel' : s === 1 ? 'village_crate' : 'village_bench';
+            }
+        } else if (height > 0.28 && !isRoad) {
+            if (objVal > 0.8) {
+                if (biome.id === 'forest') decoType = `forest_tree_${(Math.abs(gx)%5)+1}`;
+                else if (biome.id === 'jungle') decoType = `jungle_tree_${(Math.abs(gx)%5)+1}`;
+                else if (biome.id === 'mountains') decoType = `rock_${(Math.abs(gx)%8)+1}`;
+                else if (objVal > 0.98) { decoType = 'world_campfire'; isAnimated = true; }
+            }
         }
 
         return { biome, structureType, decoType, isAnimated, isRoad };

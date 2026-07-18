@@ -6,10 +6,11 @@ export const CONFIG = {
     KINGDOM_CENTER: 500000,
     LAYERS: {
         FLOOR: 0,
-        SHADOWS: 1,
-        WORLD_OBJECTS: 2, 
-        STRUCTURE_ROOF: 3,
-        UI_OVERLAY: 4
+        PATHWAYS: 1,
+        SHADOWS: 2,
+        WORLD_OBJECTS: 3, 
+        STRUCTURE_ROOF: 4,
+        UI_OVERLAY: 5
     }
 };
 
@@ -19,7 +20,8 @@ export const BIOMES = {
     SUBURBS: { id: 'suburbs', color: 0x7f8c8d, accent: 0x2c3e50, name: 'Предместья' },
     FARMLAND: { id: 'farmland', color: 0x8b4513, accent: 0x5d4037, name: 'Пашни' },
     WILDERNESS: { id: 'wild', color: 0x27ae60, accent: 0x1e3a1a, name: 'Дикие Земли' },
-    ROAD: { id: 'road', color: 0x3d3126, accent: 0x2d1b0d, name: 'Тракт' }
+    ROAD: { id: 'road', color: 0x3d3126, accent: 0x2d1b0d, name: 'Королевский Тракт' },
+    DIRT_PATH: { id: 'path', color: 0x5d4037, accent: 0x3e2723, name: 'Тропа' }
 };
 
 export const RACES = {

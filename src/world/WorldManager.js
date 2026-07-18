@@ -14,10 +14,8 @@ export class WorldManager {
         this.npcs = [];
         
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
-        
         this.layers = {};
         this.initLayers();
-        
         this.generator = new TerrainGenerator(Date.now());
         this.animTimer = 0;
         this.player = null;
@@ -38,7 +36,7 @@ export class WorldManager {
         this.envTextures = ObjectTemplates.generate(this.app, BIOMES);
         
         const g = new PIXI.Graphics();
-        g.beginFill(0xff00ff).drawRect(0,0,32,32); // Fallback texture
+        g.beginFill(0xff00ff).drawRect(0,0,32,32); 
         this.fallbackTex = this.app.renderer.generateTexture(g);
     }
 
@@ -47,9 +45,8 @@ export class WorldManager {
         this.layers.WORLD_OBJECTS.removeChildren();
         this.npcs = [];
 
-        const assets = CharacterFactory.createRaceTexture(this.app, charData.raceId, charData.color);
+        const assets = CharacterFactory.createRaceTexture(this.app, charData.raceId || 'HUMAN', charData.color);
         this.playerFrames = assets.frames;
-        
         this.playerShadow = new PIXI.Sprite(assets.shadow);
         this.playerShadow.anchor.set(0.5);
         this.layers.SHADOWS.addChild(this.playerShadow);
@@ -77,13 +74,12 @@ export class WorldManager {
             this.player.y = Math.floor(window.innerHeight / 2 + Math.sin(this.animTimer * 15) * 2);
         } else {
             this.player.texture = this.playerFrames[0];
+            this.player.scale.y = 1.0 + Math.sin(this.animTimer * 2) * 0.02;
             this.player.y = Math.floor(window.innerHeight / 2);
         }
 
         this.updateAI(dt);
-
-        this.player.x = Math.round(this.cameraPos.x);
-        this.player.y = Math.round(this.cameraPos.y);
+        this.player.position.set(this.cameraPos.x, this.cameraPos.y);
         this.player.zIndex = this.player.y;
         this.playerShadow.position.set(this.player.x, this.player.y + 2);
 
@@ -136,13 +132,8 @@ export class WorldManager {
                         const wy = (gy + p.y) * 32;
                         const tex = this.envTextures[p.t] || this.fallbackTex;
                         
-                        let s;
-                        if (Array.isArray(tex)) {
-                            s = new PIXI.AnimatedSprite(tex);
-                            s.animationSpeed = 0.1; s.play();
-                        } else {
-                            s = new PIXI.Sprite(tex);
-                        }
+                        let s = Array.isArray(tex) ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
+                        if (Array.isArray(tex)) { s.animationSpeed = 0.1; s.play(); }
 
                         if (p.l === 'r') {
                             s.position.set((tx + p.x) * 32, (ty + p.y) * 32);
@@ -161,9 +152,10 @@ export class WorldManager {
                     const tex = this.envTextures[data.deco];
                     if (tex) {
                         const obj = new PIXI.Sprite(tex);
+                        const wx = gx * 32 + 16;
+                        const wy = gy * 32 + 32;
                         obj.anchor.set(0.5, 0.95);
-                        obj.position.set(gx * 32 + 16, gy * 32 + 32);
-                        obj.zIndex = obj.y;
+                        obj.position.set(wx, wy); obj.zIndex = wy;
                         this.layers.WORLD_OBJECTS.addChild(obj);
                         chunkObjs.push(obj);
                     }
@@ -219,10 +211,8 @@ export class WorldManager {
         
         this.layers.STRUCTURE_ROOF.children.forEach(c => {
             c.children.forEach(r => {
-                const dx = r.userData.gx - px;
-                const dy = r.userData.gy - py;
-                const distSq = dx*dx + dy*dy;
-                r.alpha = (distSq < 12) ? 0.3 : 1.0;
+                const dx = r.userData.gx - px, dy = r.userData.gy - py;
+                r.alpha = (dx*dx + dy*dy < 12) ? 0.3 : 1.0;
             });
         });
     }

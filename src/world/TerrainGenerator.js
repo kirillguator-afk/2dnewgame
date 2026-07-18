@@ -10,37 +10,32 @@ export class TerrainGenerator {
     }
 
     getTileData(gx, gy) {
-        // Окрашиваем биомы крупными пятнами
-        const bScale = 0.005;
+        const bScale = 0.003;
         const bVal = (this.biomeNoise.perlin(gx * bScale, gy * bScale) + 1) / 2;
 
         let biome;
-        if (bVal < 0.25) biome = BIOMES.BASALT_PEAKS;
-        else if (bVal < 0.5) biome = BIOMES.NEON_RUINS;
-        else if (bVal < 0.75) biome = BIOMES.MAGNETIC_DESERT;
-        else biome = BIOMES.TOXIC_SWAMP;
+        if (bVal < 0.25) biome = BIOMES.MOUNTAINS;
+        else if (bVal < 0.5) biome = BIOMES.FOREST;
+        else if (bVal < 0.75) biome = BIOMES.WASTELAND;
+        else biome = BIOMES.SWAMP;
 
-        // Генерация дорог (Ridge noise)
         const rScale = 0.02;
         const rVal = Math.abs(this.roadNoise.perlin(gx * rScale, gy * rScale));
-        const isRoad = rVal < 0.05;
+        const isRoad = rVal < 0.04;
 
-        // Детализация (ресурсы/мусор)
-        const dScale = 0.1;
+        const dScale = 0.15;
         const dVal = (this.detailNoise.perlin(gx * dScale, gy * dScale) + 1) / 2;
         
-        let resource = null;
-        if (!isRoad && dVal > 0.85) {
-            if (biome.id === 'ruins') resource = 'COPPER_SCRAP';
-            if (biome.id === 'swamp') resource = 'TOXIC_SLUDGE';
-            if (biome.id === 'desert') resource = 'SILICON_SAND';
-            if (biome.id === 'peaks') resource = 'IRON_ORE';
+        let objectType = null;
+        // Шанс спавна объекта в зависимости от биома
+        if (!isRoad && dVal > 0.88) {
+            objectType = biome.id; 
         }
 
         return {
             biome,
             isRoad,
-            resource,
+            objectType,
             variation: Math.floor(dVal * 10)
         };
     }

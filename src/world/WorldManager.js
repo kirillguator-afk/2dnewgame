@@ -14,7 +14,6 @@ export class WorldManager {
         window.BIOMES_REF = BIOMES;
         
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
-        
         this.layers = {};
         this.initLayers();
         this.generator = new TerrainGenerator(Date.now());
@@ -41,11 +40,10 @@ export class WorldManager {
     setup(charData) {
         const assets = CharacterFactory.createRaceTexture(this.app, charData.race, charData.color);
         this.playerFrames = assets.frames;
-        
         this.playerShadow = new PIXI.Sprite(assets.shadow);
         this.playerShadow.anchor.set(0.5);
         this.layers.SHADOWS.addChild(this.playerShadow);
-
+        
         this.player = new PIXI.Sprite(this.playerFrames[0]);
         this.player.anchor.set(0.5, 0.95);
         this.layers.WORLD_OBJECTS.addChild(this.player);
@@ -56,7 +54,6 @@ export class WorldManager {
 
     update(dt, input) {
         if (!this.player) return;
-
         let moving = false;
         if (input.isKeyDown('KeyW')) { this.cameraPos.y -= this.moveSpeed * dt; moving = true; }
         if (input.isKeyDown('KeyS')) { this.cameraPos.y += this.moveSpeed * dt; moving = true; }
@@ -74,13 +71,10 @@ export class WorldManager {
         }
 
         this.updateAI(dt);
-
-        this.player.x = Math.floor(this.cameraPos.x);
-        this.player.y = Math.floor(this.cameraPos.y);
+        this.player.x = Math.round(this.cameraPos.x);
+        this.player.y = Math.round(this.cameraPos.y);
         this.player.zIndex = this.player.y;
-        
-        this.playerShadow.x = this.player.x;
-        this.playerShadow.y = this.player.y + 2;
+        this.playerShadow.position.set(this.player.x, this.player.y + 2);
 
         this.manageChunks();
         this.renderWorld();
@@ -92,10 +86,10 @@ export class WorldManager {
             const d = npc.userData;
             d.timer -= dt;
             if (d.timer <= 0) {
-                d.state = Math.random() > 0.7 ? 'walking' : 'idle';
+                d.state = Math.random() > 0.6 ? 'walking' : 'idle';
                 d.timer = 3 + Math.random() * 5;
-                d.vx = d.state === 'walking' ? (Math.random() - 0.5) * 40 : 0;
-                d.vy = d.state === 'walking' ? (Math.random() - 0.5) * 40 : 0;
+                d.vx = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
+                d.vy = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
             }
             if (d.state === 'walking') {
                 npc.x += d.vx * dt; npc.y += d.vy * dt;
@@ -119,45 +113,42 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                // Floor
-                const tileId = data.isRoad ? 'road' : data.biome.id;
-                const tile = new PIXI.Sprite(this.envTextures[`tile_${tileId}`]);
+                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`]);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
-                // Structures
                 if (data.structure) {
                     BuildingTemplates.getHouseSchema(data.structure).forEach(p => {
                         const wx = (gx + p.x) * 32;
                         const wy = (gy + p.y) * 32;
+                        const tex = p.anim ? (this.envTextures[p.t] || this.envTextures.animated_magic_fire) : (this.envTextures[p.t] || this.buildTextures[p.t]);
+                        
                         if (p.l === 'r') {
-                            const s = new PIXI.Sprite(this.buildTextures[p.t]);
-                            s.position.set((tx + p.x) * 32, (ty + p.y) * 32);
+                            const s = new PIXI.Sprite(tex);
+                            s.position.set((gx - cx * CONFIG.CHUNK_SIZE + p.x) * 32, (gy - cy * CONFIG.CHUNK_SIZE + p.y) * 32);
                             s.userData = { gx: gx + p.x, gy: gy + p.y };
                             roofs.addChild(s);
                         } else {
-                            const s = new PIXI.Sprite(this.envTextures[p.t] || this.buildTextures[p.t]);
+                            const s = p.anim ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
                             s.position.set(wx, wy); s.zIndex = wy + 16;
+                            if(p.anim) { s.animationSpeed=0.1; s.play(); }
                             this.layers.WORLD_OBJECTS.addChild(s);
                             chunkObjs.push(s);
                         }
                     });
                 }
 
-                // Decor
                 if (data.deco) {
                     const tex = this.envTextures[data.deco];
                     const obj = Array.isArray(tex) ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
-                    const wx = gx * 32 + 16;
-                    const wy = gy * 32 + 32;
                     obj.anchor.set(0.5, 0.95);
-                    obj.position.set(wx, wy); obj.zIndex = wy;
+                    obj.position.set(gx * 32 + 16, gy * 32 + 32);
+                    obj.zIndex = obj.y;
                     if (Array.isArray(tex)) { obj.animationSpeed = 0.1; obj.play(); }
                     this.layers.WORLD_OBJECTS.addChild(obj);
                     chunkObjs.push(obj);
                 }
 
-                // NPCs
                 if (data.npc) {
                     const npc = NPCFactory.createNPC(this.app, data.npc, '#ffffff');
                     npc.position.set(gx * 32 + 16, gy * 32 + 16);
@@ -204,7 +195,7 @@ export class WorldManager {
         const py = Math.floor(this.cameraPos.y / 32);
         this.layers.STRUCTURE_ROOF.children.forEach(c => c.children.forEach(r => {
             const dx = r.userData.gx - px, dy = r.userData.gy - py;
-            r.alpha = (dx*dx + dy*dy < 12) ? 0.3 : 1.0;
+            r.alpha = (dx*dx + dy*dy < 16) ? 0.25 : 1.0;
         }));
     }
 

@@ -4,75 +4,71 @@ import { BIOMES, CONFIG } from '../core/Constants.js';
 
 export class TerrainGenerator {
     constructor(seed) {
-        this.biomeNoise = new Noise(seed);
-        this.detailNoise = new Noise(seed + 1);
-        this.roadNoise = new Noise(seed + 2);
+        this.elevationNoise = new Noise(seed);
+        this.moistureNoise = new Noise(seed + 123);
+        this.detailNoise = new Noise(seed + 456);
+        this.centerX = 500000;
+        this.centerY = 500000;
+        this.worldRadius = 2000; // Радиус материка
     }
 
     getTileData(gx, gy) {
-        const centerX = 500000;
-        const centerY = 500000;
-        const distToCenter = Math.sqrt(Math.pow(gx - centerX, 2) + Math.pow(gy - centerY, 2));
+        // 1. Создаем форму материка (океан по краям)
+        const dx = (gx - this.centerX) / this.worldRadius;
+        const dy = (gy - this.centerY) / this.worldRadius;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        const eScale = 0.002;
+        let e = (this.elevationNoise.perlin(gx * eScale, gy * eScale) + 1) / 2;
+        // Края материка уходят вниз (в океан)
+        e = e * (1 - dist * dist * 0.8);
+
+        const mScale = 0.0015;
+        const m = (this.moistureNoise.perlin(gx * mScale, gy * mScale) + 1) / 2;
 
         let biome;
-        const bScale = 0.003;
-        const bVal = (this.biomeNoise.perlin(gx * bScale, gy * bScale) + 1) / 2;
-
-        if (distToCenter < CONFIG.VILLAGE_RADIUS * CONFIG.CHUNK_SIZE) {
-            biome = BIOMES.VILLAGE;
-        } else {
-            if (bVal < 0.25) biome = BIOMES.MOUNTAINS;
-            else if (bVal < 0.5) biome = BIOMES.FOREST;
-            else if (bVal < 0.75) biome = BIOMES.WASTELAND;
+        if (e < 0.15) biome = BIOMES.OCEAN;
+        else if (e < 0.22) biome = BIOMES.BEACH;
+        else if (e > 0.75) biome = e > 0.85 ? BIOMES.SNOW : BIOMES.MOUNTAINS;
+        else {
+            // Матрица биомов по влажности
+            if (m < 0.3) biome = BIOMES.WASTELAND;
+            else if (m < 0.6) biome = BIOMES.FOREST;
             else biome = BIOMES.SWAMP;
         }
 
-        const rScale = 0.02;
-        const rVal = Math.abs(this.roadNoise.perlin(gx * rScale, gy * rScale));
-        const isRoad = rVal < 0.04 || biome.id === 'village';
+        // Принудительная деревня в центре
+        const distToCenterTiles = Math.sqrt(Math.pow(gx - this.centerX, 2) + Math.pow(gy - this.centerY, 2));
+        if (distToCenterTiles < 50) biome = BIOMES.VILLAGE;
 
-        const dScale = 0.15;
-        const dVal = (this.detailNoise.perlin(gx * dScale, gy * dScale) + 1) / 2;
-        
-        let structureType = null;
+        const dVal = (this.detailNoise.perlin(gx * 0.1, gy * 0.1) + 1) / 2;
         let decoType = null;
         let isAnimated = false;
+        let structureType = null;
 
-        // Декор в деревне
-        if (biome.id === 'village' && !isRoad) {
-            const seed = Math.abs(gx * 7 + gy * 13) % 100;
-            if (gx % 12 === 0 && gy % 12 === 0) {
-                structureType = seed < 50 ? 'hut' : 'blacksmith';
-            } else if (dVal > 0.85) {
-                decoType = seed > 50 ? 'village_barrel' : 'village_crate';
-            }
-        }
-
-        // Анимированный декор в мире
-        if (biome.id !== 'village' && !isRoad && dVal > 0.92) {
-            const worldSeed = Math.abs(gx * 3 + gy * 17) % 100;
-            if (biome.id === 'forest' && worldSeed > 80) {
-                decoType = 'forest_magic_shroom';
-                isAnimated = true;
-            } else if (biome.id === 'swamp' && worldSeed > 70) {
-                decoType = 'swamp_bubbles';
-                isAnimated = true;
-            } else if (biome.id === 'mountains' && worldSeed > 85) {
-                decoType = 'mountains_crystal';
-                isAnimated = true;
-            } else if (worldSeed < 5) {
-                decoType = 'world_campfire';
-                isAnimated = true;
+        // Генерация объектов
+        if (biome.id !== 'ocean') {
+            const seed = Math.abs(gx * 13 + gy * 7) % 100;
+            
+            if (biome.id === 'village') {
+                if (gx % 12 === 0 && gy % 12 === 0) structureType = (seed < 50) ? 'hut' : 'blacksmith';
+                else if (dVal > 0.8) decoType = (seed > 50) ? 'village_barrel' : 'village_crate';
+            } else if (dVal > 0.94) {
+                if (biome.id === 'forest') { decoType = seed > 50 ? 'forest_magic_shroom' : 'forest_tree_1'; isAnimated = seed > 50; }
+                else if (biome.id === 'swamp') { decoType = 'swamp_bubbles'; isAnimated = true; }
+                else if (biome.id === 'mountains') { decoType = 'mountains_crystal'; isAnimated = true; }
+                else if (biome.id === 'wasteland') { decoType = seed > 80 ? 'world_campfire' : 'mountains_rock_1'; isAnimated = seed > 80; }
             }
         }
 
         return {
             biome,
-            isRoad,
+            elevation: e,
+            moisture: m,
             structureType,
             decoType,
             isAnimated,
-            objectType: (!isRoad && !structureType && !decoType && dVal > 0.85) ? biome.id : null
+            objectType: (!structureType && !decoType && dVal > 0.85 && biome.id === 'forest') ? 'forest_tree_1' : null
         };
     }
 }

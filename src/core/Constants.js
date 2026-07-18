@@ -4,11 +4,10 @@ export const CONFIG = {
     CHUNK_SIZE: 16,
     WORLD_SIZE: 1000000,
     VILLAGE_RADIUS: 5,
-    // Порядок слоев (Z-Index в PIXI stage)
     LAYERS: {
         FLOOR: 0,
         SHADOWS: 1,
-        WORLD_OBJECTS: 2, // Здесь игрок, деревья, дома и декор (Y-Sorted)
+        WORLD_OBJECTS: 2, 
         ROOFS: 3,
         VFX: 4,
         UI_OVERLAY: 5
@@ -16,11 +15,14 @@ export const CONFIG = {
 };
 
 export const BIOMES = {
-    FOREST: { id: 'forest', color: 0x243a1f, accent: 0x3d5a27, name: 'Мглистый Лес' },
-    WASTELAND: { id: 'wasteland', color: 0x4a3d30, accent: 0x5d4037, name: 'Пустошь' },
-    MOUNTAINS: { id: 'mountains', color: 0x3d3d3d, accent: 0x2c3e50, name: 'Горы' },
-    SWAMP: { id: 'swamp', color: 0x1a1f1a, accent: 0x16a085, name: 'Топь' },
-    VILLAGE: { id: 'village', color: 0x2f3542, accent: 0xf1c40f, name: 'Поселение' }
+    OCEAN: { id: 'ocean', color: 0x1e3799, accent: 0x4834d4, name: 'Великий Океан' },
+    BEACH: { id: 'beach', color: 0xf6e58d, accent: 0xf9ca24, name: 'Золотые Пески' },
+    FOREST: { id: 'forest', color: 0x27ae60, accent: 0x2ecc71, name: 'Изумрудная Чаща' },
+    WASTELAND: { id: 'wasteland', color: 0xe67e22, accent: 0xd35400, name: 'Ржавая Пустошь' },
+    MOUNTAINS: { id: 'mountains', color: 0x95a5a6, accent: 0x7f8c8d, name: 'Стальные Пики' },
+    SNOW: { id: 'snow', color: 0xffffff, accent: 0xdff9fb, name: 'Ледяное Безмолвие' },
+    SWAMP: { id: 'swamp', color: 0x1e272e, accent: 0x05c46b, name: 'Гиблое Болото' },
+    VILLAGE: { id: 'village', color: 0x4b4b4b, accent: 0xffdd59, name: 'Древнее Поселение' }
 };
 
 export const RACES = {

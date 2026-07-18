@@ -4,107 +4,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANCIENT GEAR | Древние Механизмы</title>
+    <title>ANCIENT GEAR | Древние Технологии</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;700&family=Ruslan+Display&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Crimson Pro', serif; }
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'Crimson Pro', serif; color: #f5f6fa; }
         canvas { display: block; image-rendering: pixelated; }
         
-        /* 3D Эффект для меню */
-        .perspective-container {
-            perspective: 1000px;
+        /* Глобальные 3D эффекты */
+        .perspective-root {
+            perspective: 1200px;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        
+
         .rpg-panel-3d { 
-            background: linear-gradient(135deg, #2f3640 0%, #1e272e 100%);
+            background: linear-gradient(145deg, #2c313c, #1a1e26);
             border: 4px solid #8c7e6d;
-            box-shadow: 20px 20px 50px rgba(0,0,0,0.8), inset 2px 2px 10px rgba(255,255,255,0.1);
-            color: #f5f6fa;
-            transform: rotateY(-10deg) rotateX(5deg);
-            transition: transform 0.5s ease;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.9);
+            transform: rotateX(5deg) rotateY(-5deg);
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
         }
         
         .rpg-panel-3d:hover {
-            transform: rotateY(0deg) rotateX(0deg);
+            transform: rotateX(0deg) rotateY(0deg) scale(1.02);
         }
 
         .rpg-button {
             background: #8c7e6d;
-            border: 2px solid #3d2b1f;
-            box-shadow: 4px 4px 0px #000;
+            border: 2px solid #4a3f35;
             color: #fff;
-            font-weight: bold;
             font-family: 'Ruslan Display', cursive;
-            transition: all 0.2s;
+            text-shadow: 2px 2px 0 #000;
+            box-shadow: 0 4px 0 #3d2b1f;
+            transition: all 0.1s;
         }
         
-        .rpg-button:hover {
-            background: #af9164;
-            transform: translate(-2px, -2px);
-            box-shadow: 6px 6px 0px #000;
+        .rpg-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0px 0 #3d2b1f;
         }
 
-        .stat-bar { height: 16px; background: #1a1a1a; border: 2px solid #3d2b1f; position: relative; }
-        .stat-bar-fill { height: 100%; background: #c0392b; box-shadow: inset 0 0 8px rgba(0,0,0,0.5); }
+        .stat-bar { height: 12px; background: #000; border: 1px solid #8c7e6d; overflow: hidden; }
+        .stat-bar-fill { height: 100%; background: #c0392b; width: 100%; }
 
-        .pixel-border {
-            border-image-source: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAGCAYAAADgzosWAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVChTY/z//z8DDAA5IDQoAgByYQQGPZ977AAAAABJRU5ErkJggg==');
-            border-image-slice: 2;
-            border-width: 4px;
-        }
-        
         #splash-screen {
-            background: radial-gradient(circle, #2d5a27 0%, #0a0a0a 100%);
+            background: radial-gradient(circle at center, #2d5a27 0%, #050505 100%);
+            z-index: 100;
+        }
+
+        .floating { animation: floating 4s ease-in-out infinite; }
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        input, select {
+            background: rgba(0,0,0,0.5) !important;
+            border: 2px solid #4a3f35 !important;
+            color: #af9164 !important;
+            padding: 10px;
         }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
 
-    <!-- Экран загрузки / Заставка -->
-    <div id="splash-screen" class="fixed inset-0 z-[60] flex flex-col items-center justify-center text-center p-10">
-        <h1 class="text-7xl text-yellow-600 font-['Ruslan_Display'] mb-4 drop-shadow-2xl">ANCIENT GEAR</h1>
-        <p class="text-xl text-yellow-200/50 uppercase tracking-[0.5em] mb-12">Древние Технологии</p>
-        <button id="enter-btn" class="rpg-button px-12 py-4 text-2xl uppercase">Войти в мир</button>
+    <!-- Заставка -->
+    <div id="splash-screen" class="fixed inset-0 flex flex-col items-center justify-center p-10">
+        <div class="floating text-center">
+            <h1 class="text-8xl text-yellow-600 font-['Ruslan_Display'] mb-2 drop-shadow-2xl">ANCIENT GEAR</h1>
+            <p class="text-2xl text-yellow-100/40 uppercase tracking-[0.8em] mb-12">Древние Технологии</p>
+        </div>
+        <button id="enter-btn" class="rpg-button px-16 py-6 text-3xl uppercase tracking-widest">Войти в мир</button>
     </div>
 
     <!-- Создание персонажа -->
-    <div id="creator-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 perspective-container">
-        <div class="rpg-panel-3d w-full max-w-5xl p-10 rounded-lg flex flex-col md:flex-row gap-12">
-            <div class="flex-1 space-y-8">
-                <h2 class="text-5xl font-['Ruslan_Display'] text-yellow-500">Личное Дело</h2>
+    <div id="creator-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 perspective-root">
+        <div class="rpg-panel-3d w-full max-w-5xl p-12 flex flex-col md:flex-row gap-12">
+            <div class="flex-1">
+                <h2 class="text-5xl font-['Ruslan_Display'] text-yellow-500 mb-8 border-b border-yellow-900/30 pb-4">Свиток Героя</h2>
                 <div class="space-y-6">
                     <div>
-                        <label class="text-sm uppercase text-gray-400 mb-2 block">Имя Путешественника</label>
-                        <input id="char-name" type="text" placeholder="Безымянный" class="w-full text-xl bg-black/40 border-2 border-yellow-900/50 p-4 text-white outline-none focus:border-yellow-500 transition-all">
+                        <label class="text-xs uppercase text-yellow-700 font-bold mb-2 block">Имя Путешественника</label>
+                        <input id="char-name" type="text" maxlength="12" placeholder="Ваше имя..." class="w-full text-xl outline-none">
                     </div>
                     <div>
-                        <label class="text-sm uppercase text-gray-400 mb-2 block">Происхождение</label>
-                        <select id="char-race" class="w-full text-xl bg-black/40 border-2 border-yellow-900/50 p-4 text-white outline-none">
-                            <option value="HUMAN">Люди (Королевство)</option>
-                            <option value="DWARVEN">Дворфы (Подгорье)</option>
-                            <option value="ELVEN">Эльфы (Серебряный Лист)</option>
-                            <option value="ORCISH">Орки (Кровавая Степь)</option>
+                        <label class="text-xs uppercase text-yellow-700 font-bold mb-2 block">Древнее Происхождение</label>
+                        <select id="char-race" class="w-full text-xl">
+                            <option value="HUMAN">Человек (Королевство)</option>
+                            <option value="DWARVEN">Дворф (Подгорье)</option>
+                            <option value="ELVEN">Эльф (Серебряный Лист)</option>
+                            <option value="ORCISH">Орк (Кровавая Степь)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="text-sm uppercase text-gray-400 mb-2 block">Цвет Одеяния</label>
-                        <input id="char-color" type="color" value="#c0392b" class="w-full h-16 border-none bg-transparent cursor-pointer">
+                        <label class="text-xs uppercase text-yellow-700 font-bold mb-2 block">Цвет Одеяния</label>
+                        <input id="char-color" type="color" value="#c0392b" class="w-full h-12 cursor-pointer">
                     </div>
                 </div>
             </div>
             
-            <div class="flex-1 flex flex-col justify-between border-l border-yellow-900/30 pl-12">
-                <div>
-                    <div class="flex justify-between items-center mb-8">
-                        <span class="text-yellow-600 text-lg font-bold uppercase">Очки способностей</span>
+            <div class="flex-1 flex flex-col justify-between">
+                <div class="bg-black/30 p-6 border border-yellow-900/20">
+                    <div class="flex justify-between items-center mb-6">
+                        <span class="text-yellow-600 text-lg uppercase font-bold">Очки навыков</span>
                         <span id="stat-points" class="text-5xl font-['Ruslan_Display']">20</span>
                     </div>
-                    <div id="stat-container" class="space-y-8"><!-- Характеристики --></div>
+                    <div id="stat-container" class="space-y-6"><!-- Характеристики --></div>
                 </div>
-                <button id="start-btn" class="rpg-button w-full py-6 text-3xl mt-8">Начать Приключение</button>
+                <button id="start-btn" class="rpg-button w-full py-6 text-3xl mt-8">Начать путь</button>
             </div>
         </div>
     </div>
@@ -112,16 +126,16 @@
     <!-- Игровой HUD -->
     <div id="ui-layer" class="hidden fixed inset-0 pointer-events-none p-8 flex flex-col justify-between">
         <div class="flex justify-between items-start">
-            <div class="rpg-panel-3d p-6 w-80 pointer-events-auto" style="transform: none;">
+            <div class="rpg-panel-3d p-6 w-72 pointer-events-auto" style="transform: none;">
                 <div id="hud-name" class="font-bold text-2xl text-yellow-500 font-['Ruslan_Display']">---</div>
-                <div class="stat-bar mt-4"><div class="stat-bar-fill" style="width: 100%"></div></div>
-                <div class="flex justify-between mt-2">
-                    <span class="text-xs uppercase font-bold text-gray-400">Жизненная Сила</span>
-                    <span id="hud-race-label" class="text-xs uppercase text-yellow-700">---</span>
+                <div class="stat-bar mt-3"><div class="stat-bar-fill"></div></div>
+                <div class="flex justify-between mt-2 text-[10px] uppercase font-bold text-gray-500">
+                    <span>Здоровье</span>
+                    <span id="hud-race-label">---</span>
                 </div>
             </div>
-            <div class="rpg-panel-3d p-4 px-6 pointer-events-auto" style="transform: none;">
-                <div id="coords" class="text-lg font-mono text-yellow-500/80">X: 0 Y: 0</div>
+            <div class="rpg-panel-3d p-4 pointer-events-auto" style="transform: none;">
+                <div id="coords" class="text-sm font-mono text-yellow-600">X: 0 Y: 0</div>
             </div>
         </div>
     </div>

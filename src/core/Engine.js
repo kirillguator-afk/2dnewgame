@@ -8,34 +8,57 @@ export class Engine {
         this.app = null;
         this.world = null;
         this.input = null;
-        this.gameState = 'SPLASH'; // SPLASH | CREATOR | PLAYING
+        this.gameState = 'SPLASH';
+        this.isInitialized = false;
     }
 
     async init(containerId) {
+        // 1. СРАЗУ вешаем обработчик на главную кнопку, не дожидаясь PIXI
+        const enterBtn = document.getElementById('enter-btn');
+        if (enterBtn) {
+            enterBtn.onclick = () => {
+                if (!this.isInitialized) {
+                    console.warn("Мир еще загружается...");
+                    return;
+                }
+                this.showCharacterCreator();
+            };
+        }
+
+        // 2. Инициализируем PIXI
         this.app = new PIXI.Application({
             resizeTo: window,
-            backgroundColor: 0x0a0a0a,
+            backgroundColor: 0x050505,
             antialias: false,
             resolution: window.devicePixelRatio || 1,
         });
 
-        document.getElementById(containerId).appendChild(this.app.view);
+        const container = document.getElementById(containerId);
+        if (container) container.appendChild(this.app.view);
 
         this.input = new InputHandler();
         this.world = new WorldManager(this.app);
         
-        await this.world.loadResources();
+        // 3. Загружаем ресурсы
+        try {
+            await this.world.loadResources();
+            this.isInitialized = true;
+            console.log("Engine: Ресурсы загружены");
+        } catch (e) {
+            console.error("Engine: Ошибка загрузки ресурсов", e);
+        }
 
-        // Логика кнопок меню
-        document.getElementById('enter-btn').onclick = () => {
-            document.getElementById('splash-screen').classList.add('hidden');
-            document.getElementById('creator-overlay').classList.remove('hidden');
-            this.gameState = 'CREATOR';
-        };
+        // 4. Инициализируем создатель персонажа (он скрыт в HTML)
+        this.creator = new CharacterCreator((data) => this.startGame(data));
 
-        new CharacterCreator((data) => this.startGame(data));
-
+        // 5. Запускаем тикер
         this.app.ticker.add((delta) => this.update(delta));
+    }
+
+    showCharacterCreator() {
+        document.getElementById('splash-screen').classList.add('hidden');
+        document.getElementById('creator-overlay').classList.remove('hidden');
+        this.gameState = 'CREATOR';
     }
 
     startGame(data) {
@@ -43,6 +66,7 @@ export class Engine {
         document.getElementById('hud-name').innerText = data.name;
         document.getElementById('hud-race-label').innerText = data.race;
         this.world.setup(data);
+        console.log("Engine: Игра началась");
     }
 
     update(delta) {
@@ -52,9 +76,10 @@ export class Engine {
         this.input.update();
         this.world.update(dt, this.input);
         
-        // Координаты в плитках
         const pos = this.world.cameraPos;
-        document.getElementById('coords').innerText = 
-            `Широта: ${Math.floor(pos.x / 32)} Долгота: ${Math.floor(pos.y / 32)}`;
+        const coordsEl = document.getElementById('coords');
+        if (coordsEl) {
+            coordsEl.innerText = `X: ${Math.floor(pos.x / 32)} Y: ${Math.floor(pos.y / 32)}`;
+        }
     }
 }

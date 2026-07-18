@@ -12,19 +12,20 @@ import { CONFIG, BIOMES } from '../core/Constants.js';
 export class WorldManager {
     constructor(app) {
         this.app = app;
-        // Центр мира в пикселях
+        // Стартовая позиция в центре бесконечного мира
         this.cameraPos = { x: 500000 * 32, y: 500000 * 32 };
         this.loadedChunks = new Map();
         this.entities = new Map();
         
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
         
-        // Инициализация слоев (Containers)
+        // Создаем слои СРАЗУ в конструкторе
         this.layers = {};
-        Object.keys(CONFIG.LAYERS).forEach(key => {
+        const layerNames = Object.keys(CONFIG.LAYERS);
+        layerNames.forEach((name) => {
             const container = new PIXI.Container();
             this.app.stage.addChild(container);
-            this.layers[key] = container;
+            this.layers[name] = container;
         });
 
         this.generator = new TerrainGenerator(Date.now());
@@ -34,6 +35,7 @@ export class WorldManager {
         this.buildingSystem = new BuildingSystem(this);
         
         this.animTimer = 0;
+        this.player = null;
     }
 
     async loadResources() {
@@ -49,6 +51,10 @@ export class WorldManager {
         const charAssets = CharacterFactory.createRaceTexture(this.app, charData.race, charData.color);
         this.playerFrames = charAssets.frames;
         
+        // Очищаем слои игрока на случай рестарта
+        this.layers.PLAYER_SHADOW.removeChildren();
+        this.layers.PLAYER.removeChildren();
+
         // Тень
         this.playerShadow = new PIXI.Sprite(charAssets.shadow);
         this.playerShadow.anchor.set(0.5);
@@ -59,12 +65,15 @@ export class WorldManager {
         this.player.anchor.set(0.5, 1.0);
         this.layers.PLAYER.addChild(this.player);
         
-        // Фиксация позиции игрока по центру экрана
+        // Позиция на экране (центр)
         this.player.position.set(window.innerWidth / 2, window.innerHeight / 2);
         this.playerShadow.position.set(window.innerWidth / 2, window.innerHeight / 2);
 
-        this.moveSpeed = 220 + (charData.stats.dex * 10);
+        this.moveSpeed = 220 + (charData.stats.dex * 8);
         this.buildingSystem.setup();
+        
+        // Инициализируем первые чанки вокруг игрока
+        this.manageChunks();
     }
 
     update(dt, input) {
@@ -76,16 +85,15 @@ export class WorldManager {
         if (input.isKeyDown('KeyA')) { this.cameraPos.x -= this.moveSpeed * dt; this.player.scale.x = -1; moving = true; }
         if (input.isKeyDown('KeyD')) { this.cameraPos.x += this.moveSpeed * dt; this.player.scale.x = 1; moving = true; }
 
+        this.animTimer += dt;
         if (moving) {
-            this.animTimer += dt * 8;
-            const frame = Math.floor(this.animTimer) % 2;
+            const frame = Math.floor(this.animTimer * 10) % 2;
             this.player.texture = this.playerFrames[frame];
-            this.player.y = (window.innerHeight / 2) + Math.sin(this.animTimer * 1.5) * 2;
+            this.player.y = (window.innerHeight / 2) + Math.sin(this.animTimer * 12) * 2;
         } else {
-            this.animTimer += dt * 2;
             this.player.texture = this.playerFrames[0];
-            this.player.scale.y = 1.0 + Math.sin(this.animTimer) * 0.015;
-            this.player.y = window.innerHeight / 2;
+            this.player.y = (window.innerHeight / 2) + Math.sin(this.animTimer * 2) * 1;
+            this.player.scale.y = 1.0 + Math.sin(this.animTimer * 2) * 0.01;
         }
 
         this.atmosphere.update(dt, this.cameraPos);
@@ -122,7 +130,7 @@ export class WorldManager {
                 
                 const tile = new PIXI.Sprite(this.baseTileTex);
                 tile.position.set(tx * 32, ty * 32);
-                tile.tint = data.isRoad ? 0x3a3a3a : data.biome.color;
+                tile.tint = data.isRoad ? 0x3d3d3d : data.biome.color;
                 bodyCont.addChild(tile);
 
                 if (data.structureType) {
@@ -164,13 +172,14 @@ export class WorldManager {
     }
 
     handleRoofTransparency() {
+        if (!this.player) return;
         const px = Math.floor(this.cameraPos.x / 32);
         const py = Math.floor(this.cameraPos.y / 32);
         
         this.loadedChunks.forEach(chunk => {
             chunk.roof.children.forEach(roofTile => {
                 const distSq = Math.pow(roofTile.userData.gx - px, 2) + Math.pow(roofTile.userData.gy - py, 2);
-                roofTile.alpha = distSq < 4 ? 0.2 : 1.0;
+                roofTile.alpha = distSq < 4 ? 0.3 : 1.0;
             });
         });
     }

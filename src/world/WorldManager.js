@@ -1,6 +1,7 @@
 
 import { TerrainGenerator } from './TerrainGenerator.js';
 import { CharacterFactory } from '../entities/CharacterFactory.js';
+import { NPCFactory } from '../entities/NPCFactory.js';
 import { ObjectTemplates } from './objects/ObjectTemplates.js';
 import { BuildingTemplates } from './objects/BuildingTemplates.js';
 import { CONFIG, BIOMES } from '../core/Constants.js';
@@ -20,6 +21,7 @@ export class WorldManager {
         this.generator = new TerrainGenerator(Date.now());
         this.animTimer = 0;
         this.player = null;
+        this.npcs = [];
     }
 
     initLayers() {
@@ -72,7 +74,9 @@ export class WorldManager {
             this.player.y = Math.floor(window.innerHeight / 2);
         }
 
-        // Обновляем zIndex игрока по мировому Y
+        // Обновляем AI ботов
+        this.updateNPCs(dt);
+
         this.player.x = Math.round(this.cameraPos.x);
         this.player.y = Math.round(this.cameraPos.y);
         this.player.zIndex = this.player.y;
@@ -83,6 +87,26 @@ export class WorldManager {
         this.manageChunks();
         this.renderWorld();
         this.handleTransparency();
+    }
+
+    updateNPCs(dt) {
+        this.npcs.forEach(npc => {
+            const data = npc.userData;
+            data.timer -= dt;
+            if (data.timer <= 0) {
+                data.state = Math.random() > 0.5 ? 'walking' : 'idle';
+                data.timer = 2 + Math.random() * 5;
+                data.vx = data.state === 'walking' ? (Math.random() - 0.5) * 50 : 0;
+                data.vy = data.state === 'walking' ? (Math.random() - 0.5) * 50 : 0;
+            }
+
+            if (data.state === 'walking') {
+                npc.x += data.vx * dt;
+                npc.y += data.vy * dt;
+                npc.zIndex = npc.y;
+                if (data.vx !== 0) npc.scale.x = data.vx > 0 ? 1 : -1;
+            }
+        });
     }
 
     manageChunks() {
@@ -97,15 +121,18 @@ export class WorldManager {
             }
         }
 
-        // Очистка чанков
         if (this.loadedChunks.size > 12) {
             for (const [key, chunk] of this.loadedChunks) {
                 const [cx, cy] = key.split(',').map(Number);
                 if (Math.abs(cx - curX) > 2 || Math.abs(cy - curY) > 2) {
                     chunk.floor.destroy({ children: true });
                     chunk.roofs.destroy({ children: true });
-                    // КРИТИЧЕСКИЙ ФИКС: Удаляем все объекты чанка из глобального слоя сортировки
-                    chunk.worldObjects.forEach(obj => obj.destroy());
+                    chunk.worldObjects.forEach(obj => {
+                        if (this.npcs.includes(obj)) {
+                            this.npcs.splice(this.npcs.indexOf(obj), 1);
+                        }
+                        obj.destroy();
+                    });
                     this.loadedChunks.delete(key);
                 }
             }
@@ -115,7 +142,7 @@ export class WorldManager {
     createChunk(cx, cy) {
         const floor = new PIXI.Container();
         const roofs = new PIXI.Container();
-        const worldObjects = []; // Храним ссылки на объекты в WORLD_OBJECTS
+        const worldObjects = [];
         const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
         
         floor.position.set(cx * chunkPx, cy * chunkPx);
@@ -127,45 +154,65 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                // 1. Плитка
                 const tileId = data.isRoad ? 'road' : data.biome.id;
                 const tile = new PIXI.Sprite(this.envTextures[`tile_${tileId}`]);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
-                // 2. Строения
                 if (data.structureType) {
                     BuildingTemplates.getHouseSchema(data.structureType).forEach(p => {
-                        const s = new PIXI.Sprite(this.buildTextures[p.t]);
                         const wx = (cx * chunkPx) + (tx + p.x) * 32;
                         const wy = (cy * chunkPx) + (ty + p.y) * 32;
+                        
                         if (p.l === 'r') {
+                            const s = new PIXI.Sprite(this.buildTextures[p.t]);
                             s.position.set((tx + p.x) * 32, (ty + p.y) * 32);
                             s.userData = { gx: gx + p.x, gy: gy + p.y };
                             roofs.addChild(s);
                         } else {
+                            const tex = p.l === 'd' ? this.envTextures[p.t] : this.buildTextures[p.t];
+                            const s = new PIXI.Sprite(tex);
                             s.position.set(wx, wy);
                             s.zIndex = wy + 16;
                             this.layers.WORLD_OBJECTS.addChild(s);
                             worldObjects.push(s);
                         }
                     });
+
+                    // Спавн жителей в домах
+                    if (gx % 12 === 0 && gy % 12 === 0) {
+                        const npc = NPCFactory.createNPC(this.app, 'villager', '#3498db');
+                        npc.x = (cx * chunkPx) + tx * 32 + 16;
+                        npc.y = (cy * chunkPx) + ty * 32 + 48;
+                        npc.userData.homeX = npc.x;
+                        npc.userData.homeY = npc.y;
+                        this.layers.WORLD_OBJECTS.addChild(npc);
+                        this.npcs.push(npc);
+                        worldObjects.push(npc);
+                    }
                 }
 
-                // 3. Декор
-                if (data.decoType) {
+                if (data.decoType && !data.structureType) {
                     const tex = this.envTextures[data.decoType];
                     const obj = data.isAnimated ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
                     const wx = (cx * chunkPx) + tx * 32 + 16;
                     const wy = (cy * chunkPx) + ty * 32 + 32;
-                    
                     obj.anchor.set(0.5, 0.95);
                     obj.position.set(wx, wy);
                     obj.zIndex = wy;
-                    
                     if (data.isAnimated) { obj.animationSpeed = 0.1; obj.play(); }
                     this.layers.WORLD_OBJECTS.addChild(obj);
                     worldObjects.push(obj);
+                }
+                
+                // Спавн рыцарей на дорогах
+                if (data.isRoad && Math.random() > 0.995) {
+                    const knight = NPCFactory.createNPC(this.app, 'knight', '#ecf0f1');
+                    knight.x = (cx * chunkPx) + tx * 32 + 16;
+                    knight.y = (cy * chunkPx) + ty * 32 + 16;
+                    this.layers.WORLD_OBJECTS.addChild(knight);
+                    this.npcs.push(knight);
+                    worldObjects.push(knight);
                 }
             }
         }
@@ -189,7 +236,6 @@ export class WorldManager {
     renderWorld() {
         const ox = Math.floor(window.innerWidth / 2 - this.cameraPos.x);
         const oy = Math.floor(window.innerHeight / 2 - this.cameraPos.y);
-        
         this.layers.FLOOR.position.set(ox, oy);
         this.layers.SHADOWS.position.set(ox, oy);
         this.layers.WORLD_OBJECTS.position.set(ox, oy);

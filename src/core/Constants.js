@@ -8,9 +8,10 @@ export const CONFIG = {
     LAYERS: {
         BACKGROUND: 0,
         FLOOR: 1,
-        MACHINES: 2,
-        PLAYER: 3,
-        UI: 4
+        DECOR: 2,
+        MACHINES: 3,
+        PLAYER: 4,
+        UI: 5
     }
 };
 
@@ -18,6 +19,13 @@ export const ENTITY_TYPES = {
     SHAFT: 'shaft',
     GEAR: 'gear',
     MOTOR: 'motor'
+};
+
+export const BIOMES = {
+    NEON_RUINS: { id: 'ruins', color: 0x2a2a2a, accent: 0x00f2ff, name: 'Neon Ruins', density: 0.4 },
+    TOXIC_SWAMP: { id: 'swamp', color: 0x1a2e1a, accent: 0x33ff33, name: 'Toxic Swamp', density: 0.6 },
+    MAGNETIC_DESERT: { id: 'desert', color: 0x2e1a2e, accent: 0xff00ff, name: 'Magnetic Desert', density: 0.2 },
+    BASALT_PEAKS: { id: 'peaks', color: 0x111111, accent: 0x555555, name: 'Basalt Peaks', density: 0.8 }
 };
 
 export const RACES = {

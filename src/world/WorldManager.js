@@ -10,7 +10,7 @@ export class WorldManager {
         this.app = app;
         this.cameraPos = { x: 500000 * 32, y: 500000 * 32 };
         this.loadedChunks = new Map();
-        window.BIOMES_REF = BIOMES; // Для ObjectTemplates
+        window.BIOMES_REF = BIOMES;
         
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
         
@@ -23,7 +23,8 @@ export class WorldManager {
     }
 
     initLayers() {
-        Object.entries(CONFIG.LAYERS).sort((a,b) => a[1] - b[1]).forEach(([name]) => {
+        const sorted = Object.entries(CONFIG.LAYERS).sort((a,b) => a[1] - b[1]);
+        sorted.forEach(([name]) => {
             const c = new PIXI.Container();
             if (name === 'WORLD_OBJECTS') c.sortableChildren = true;
             this.app.stage.addChild(c);
@@ -39,6 +40,7 @@ export class WorldManager {
     setup(charData) {
         const assets = CharacterFactory.createRaceTexture(this.app, charData.race, charData.color);
         this.playerFrames = assets.frames;
+        
         this.playerShadow = new PIXI.Sprite(assets.shadow);
         this.playerShadow.anchor.set(0.5);
         this.layers.SHADOWS.addChild(this.playerShadow);
@@ -53,6 +55,7 @@ export class WorldManager {
 
     update(dt, input) {
         if (!this.player) return;
+
         let moving = false;
         if (input.isKeyDown('KeyW')) { this.cameraPos.y -= this.moveSpeed * dt; moving = true; }
         if (input.isKeyDown('KeyS')) { this.cameraPos.y += this.moveSpeed * dt; moving = true; }
@@ -69,7 +72,14 @@ export class WorldManager {
             this.player.y = Math.floor(window.innerHeight / 2);
         }
 
-        this.player.zIndex = Math.floor(this.cameraPos.y);
+        // Обновляем zIndex игрока по мировому Y
+        this.player.x = Math.round(this.cameraPos.x);
+        this.player.y = Math.round(this.cameraPos.y);
+        this.player.zIndex = this.player.y;
+        
+        this.playerShadow.x = this.player.x;
+        this.playerShadow.y = this.player.y + 2;
+
         this.manageChunks();
         this.renderWorld();
         this.handleTransparency();
@@ -86,12 +96,28 @@ export class WorldManager {
                 if (!this.loadedChunks.has(key)) this.createChunk(x, y);
             }
         }
+
+        // Очистка чанков
+        if (this.loadedChunks.size > 12) {
+            for (const [key, chunk] of this.loadedChunks) {
+                const [cx, cy] = key.split(',').map(Number);
+                if (Math.abs(cx - curX) > 2 || Math.abs(cy - curY) > 2) {
+                    chunk.floor.destroy({ children: true });
+                    chunk.roofs.destroy({ children: true });
+                    // КРИТИЧЕСКИЙ ФИКС: Удаляем все объекты чанка из глобального слоя сортировки
+                    chunk.worldObjects.forEach(obj => obj.destroy());
+                    this.loadedChunks.delete(key);
+                }
+            }
+        }
     }
 
     createChunk(cx, cy) {
         const floor = new PIXI.Container();
         const roofs = new PIXI.Container();
+        const worldObjects = []; // Храним ссылки на объекты в WORLD_OBJECTS
         const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
+        
         floor.position.set(cx * chunkPx, cy * chunkPx);
         roofs.position.set(cx * chunkPx, cy * chunkPx);
 
@@ -101,10 +127,13 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.biome.id}`]);
+                // 1. Плитка
+                const tileId = data.isRoad ? 'road' : data.biome.id;
+                const tile = new PIXI.Sprite(this.envTextures[`tile_${tileId}`]);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
+                // 2. Строения
                 if (data.structureType) {
                     BuildingTemplates.getHouseSchema(data.structureType).forEach(p => {
                         const s = new PIXI.Sprite(this.buildTextures[p.t]);
@@ -118,26 +147,32 @@ export class WorldManager {
                             s.position.set(wx, wy);
                             s.zIndex = wy + 16;
                             this.layers.WORLD_OBJECTS.addChild(s);
+                            worldObjects.push(s);
                         }
                     });
                 }
 
+                // 3. Декор
                 if (data.decoType) {
                     const tex = this.envTextures[data.decoType];
                     const obj = data.isAnimated ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
                     const wx = (cx * chunkPx) + tx * 32 + 16;
                     const wy = (cy * chunkPx) + ty * 32 + 32;
+                    
                     obj.anchor.set(0.5, 0.95);
                     obj.position.set(wx, wy);
                     obj.zIndex = wy;
+                    
                     if (data.isAnimated) { obj.animationSpeed = 0.1; obj.play(); }
                     this.layers.WORLD_OBJECTS.addChild(obj);
+                    worldObjects.push(obj);
                 }
             }
         }
+        
         this.layers.FLOOR.addChild(floor);
         this.layers.ROOFS.addChild(roofs);
-        this.loadedChunks.set(`${cx},${cy}`, { floor, roofs });
+        this.loadedChunks.set(`${cx},${cy}`, { floor, roofs, worldObjects });
     }
 
     handleTransparency() {
@@ -145,9 +180,8 @@ export class WorldManager {
         const py = Math.floor(this.cameraPos.y / 32);
         this.layers.ROOFS.children.forEach(chunk => {
             chunk.children.forEach(r => {
-                const dx = r.userData.gx - px;
-                const dy = r.userData.gy - py;
-                r.alpha = (dx*dx + dy*dy < 4) ? 0.3 : 1.0;
+                const dx = r.userData.gx - px, dy = r.userData.gy - py;
+                r.alpha = (dx*dx + dy*dy < 5) ? 0.3 : 1.0;
             });
         });
     }
@@ -155,11 +189,10 @@ export class WorldManager {
     renderWorld() {
         const ox = Math.floor(window.innerWidth / 2 - this.cameraPos.x);
         const oy = Math.floor(window.innerHeight / 2 - this.cameraPos.y);
+        
         this.layers.FLOOR.position.set(ox, oy);
         this.layers.SHADOWS.position.set(ox, oy);
         this.layers.WORLD_OBJECTS.position.set(ox, oy);
         this.layers.ROOFS.position.set(ox, oy);
-        this.player.position.set(this.cameraPos.x, this.cameraPos.y);
-        this.playerShadow.position.set(this.cameraPos.x, this.cameraPos.y + 2);
     }
 }

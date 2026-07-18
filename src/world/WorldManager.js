@@ -8,7 +8,7 @@ export class WorldManager {
         this.app = app;
         this.cameraPos = { x: 500000, y: 500000 };
         this.loadedChunks = new Map();
-        this.entities = new Map(); // id -> {sprite, data}
+        this.entities = new Map();
         
         this.worldContainer = new PIXI.Container();
         this.app.stage.addChild(this.worldContainer);
@@ -17,32 +17,23 @@ export class WorldManager {
         this.buildingSystem = new BuildingSystem(this);
         
         this.moveSpeed = 400;
+        this.charData = null;
     }
 
     async loadResources() {
         const createGearTexture = (color, isMotor) => {
             const g = new PIXI.Graphics();
             const size = CONFIG.TILE_SIZE;
-            
-            // Тело шестерни
             g.beginFill(color);
             g.drawCircle(size/2, size/2, size/2 - 4);
-            
-            // Зубья (упрощенно)
             for(let i=0; i<8; i++) {
                 const angle = (i / 8) * Math.PI * 2;
-                g.drawRect(
-                    size/2 + Math.cos(angle) * (size/2 - 4) - 2,
-                    size/2 + Math.sin(angle) * (size/2 - 4) - 2,
-                    4, 4
-                );
+                g.drawRect(size/2 + Math.cos(angle) * (size/2 - 4) - 2, size/2 + Math.sin(angle) * (size/2 - 4) - 2, 4, 4);
             }
-            
             if (isMotor) {
                 g.lineStyle(2, 0xff00ff);
                 g.drawRect(size/4, size/4, size/2, size/2);
             }
-
             g.endFill();
             return this.app.renderer.generateTexture(g);
         };
@@ -63,19 +54,26 @@ export class WorldManager {
         return this.app.renderer.generateTexture(g);
     }
 
-    setup() {
+    setup(charData) {
+        this.charData = charData;
         this.player = new PIXI.Sprite(this.textures.player);
         this.player.anchor.set(0.5);
         this.app.stage.addChild(this.player);
         this.player.x = window.innerWidth / 2;
         this.player.y = window.innerHeight / 2;
-        this.player.tint = 0x00f2ff;
+        
+        // Применяем цвет из редактора персонажа
+        this.player.tint = PIXI.utils.string2hex(charData.color);
+        
+        // Модифицируем скорость на основе DEX
+        this.moveSpeed = 300 + (charData.stats.dex * 20);
 
         this.buildingSystem.setup();
     }
 
     update(dt, input) {
-        // Движение
+        if (!this.player) return;
+
         if (input.isKeyDown('KeyW')) this.cameraPos.y -= this.moveSpeed * dt;
         if (input.isKeyDown('KeyS')) this.cameraPos.y += this.moveSpeed * dt;
         if (input.isKeyDown('KeyA')) this.cameraPos.x -= this.moveSpeed * dt;
@@ -84,11 +82,9 @@ export class WorldManager {
         this.buildingSystem.handleInput(input, this.cameraPos);
         this.kineticSystem.update(dt);
         
-        // Анимация сущностей
         for (const [id, ent] of this.entities) {
             const kinetic = this.kineticSystem.getKineticData(id);
             if (kinetic && kinetic.rpm !== 0) {
-                // Вращаем спрайт в зависимости от RPM
                 ent.sprite.rotation += (kinetic.rpm * Math.PI * 2 / 60) * dt;
             }
         }
@@ -115,10 +111,8 @@ export class WorldManager {
         const container = new PIXI.Container();
         container.x = cx * chunkTotalPx;
         container.y = cy * chunkTotalPx;
-
         const bg = new PIXI.TilingSprite(this.textures.floor, chunkTotalPx, chunkTotalPx);
         container.addChild(bg);
-        
         this.worldContainer.addChildAt(container, 0);
         this.loadedChunks.set(`${cx},${cy}`, container);
     }

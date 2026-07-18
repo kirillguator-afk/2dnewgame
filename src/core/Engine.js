@@ -1,12 +1,15 @@
 
 import { WorldManager } from '../world/WorldManager.js';
 import { InputHandler } from './InputHandler.js';
+import { CharacterCreator } from '../ui/CharacterCreator.js';
 
 export class Engine {
     constructor() {
         this.app = null;
         this.world = null;
         this.input = null;
+        this.gameState = 'CREATOR'; // CREATOR | PLAYING
+        this.characterData = null;
     }
 
     async init(containerId) {
@@ -23,22 +26,36 @@ export class Engine {
         this.world = new WorldManager(this.app);
         
         await this.world.loadResources();
-        this.world.setup();
+        
+        // Запускаем создатель персонажа
+        new CharacterCreator((data) => this.startGame(data));
 
         this.app.ticker.add((delta) => this.update(delta));
     }
 
-    update(delta) {
-        const dt = Math.min(delta / 60, 0.1); // Ограничиваем шаг времени
+    startGame(data) {
+        this.characterData = data;
+        this.gameState = 'PLAYING';
         
+        // Обновляем HUD
+        document.getElementById('hud-name').innerText = `USER: ${data.name}`;
+        document.getElementById('hud-race').innerText = `RACE: ${data.race}`;
+        
+        this.world.setup(data);
+        console.log("Neon-Gear Engine: Playing Mode", data);
+    }
+
+    update(delta) {
+        if (this.gameState !== 'PLAYING') return;
+
+        const dt = Math.min(delta / 60, 0.1);
         this.input.update();
         this.world.update(dt, this.input);
         
         const pos = this.world.cameraPos;
-        const rpmInfo = "RPM: 256 (Motor Mode Every 5th Tile)";
         document.getElementById('coords').innerHTML = `
             X: ${Math.floor(pos.x)} Y: ${Math.floor(pos.y)}<br>
-            <span class="text-cyan-600 text-[10px]">${rpmInfo}</span>
+            <span class="text-cyan-600 text-[10px]">RPM Simulation Active</span>
         `;
     }
 }

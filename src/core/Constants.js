@@ -19,3 +19,10 @@ export const ENTITY_TYPES = {
     GEAR: 'gear',
     MOTOR: 'motor'
 };
+
+export const RACES = {
+    HUMAN: { name: 'Human', description: 'Balanced and versatile.', color: '#ffffff', stats: { str: 5, dex: 5, int: 5, tec: 5 } },
+    ANDROID: { name: 'Android', description: 'High technical skills, low strength.', color: '#00f2ff', stats: { str: 3, dex: 4, int: 6, tec: 7 } },
+    CYBORG: { name: 'Cyborg', description: 'Enhanced strength and agility.', color: '#ff00ff', stats: { str: 7, dex: 6, int: 4, tec: 3 } },
+    RECLAIMER: { name: 'Reclaimer', description: 'Tough survivors of the waste.', color: '#ffaa00', stats: { str: 6, dex: 7, int: 3, tec: 4 } }
+};

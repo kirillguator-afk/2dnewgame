@@ -11,67 +11,60 @@ export class BuildingTemplates {
             tex[name] = app.renderer.generateTexture(g);
         };
 
-        // Материалы Цитадели
-        draw('wall_citadel', g => {
-            g.beginFill(0xd1d8e0).drawRect(0, 0, s, s);
-            g.beginFill(0xa5b1c2).drawRect(0, s-6, s, 6);
-            g.beginFill(0xf1c40f, 0.3).drawRect(4, 4, 24, 2); // Золотая кайма
-        });
+        // Стены
+        draw('wall_citadel', g => g.beginFill(0xd1d8e0).drawRect(0, 0, s, s).beginFill(0xa5b1c2).drawRect(0, s-4, s, 4));
+        draw('wall_timber', g => g.beginFill(0xf5f6fa).drawRect(0, 0, s, s).beginFill(0x3e2723).drawRect(0, 0, 4, s).drawRect(28, 0, 4, s));
+        draw('wall_stone_dark', g => g.beginFill(0x4b4b4b).drawRect(0, 0, s, s).beginFill(0x2d3436).drawRect(0, s-4, s, 4));
+        
+        // Крыши
+        draw('roof_citadel', g => g.beginFill(0x2f3640).drawRect(0, 0, s, s).beginFill(0x1e272e).drawPolygon([0,0, s,0, s/2,s/2]));
+        draw('roof_tile_red', g => g.beginFill(0xb71c1c).drawRect(0, 0, s, s).beginFill(0x7f0000).drawRect(0, 14, s, 4));
+        draw('roof_thatch', g => g.beginFill(0xd4af37).drawRect(0, 0, s, s));
 
-        draw('roof_citadel', g => {
-            g.beginFill(0x2f3640).drawRect(0, 0, s, s);
-            g.beginFill(0x1e272e).drawPolygon([0,0, s,0, s/2,s/2]);
-        });
-
-        // Материалы Города
-        draw('wall_stone_dark', g => {
-            g.beginFill(0x4b4b4b).drawRect(0, 0, s, s);
-            g.beginFill(0x2d3436).drawRect(2, 2, 28, 4);
-        });
-
-        draw('floor_citadel_marble', g => {
-            g.beginFill(0xffffff).drawRect(0, 0, s, s);
-            g.beginFill(0xd1d8e0, 0.5).drawRect(1, 1, 30, 30);
-        });
+        // Полы
+        draw('floor_citadel_marble', g => g.beginFill(0xffffff).drawRect(0, 0, s, s).beginFill(0xd1d8e0, 0.3).drawRect(1, 1, 30, 30));
+        draw('floor_planks', g => g.beginFill(0x8d6e63).drawRect(0, 0, s, s).beginFill(0x6d4c41).drawRect(0, 0, s, 2));
 
         return tex;
     }
 
     static getHouseSchema(type) {
         const h = {
-            'castle_keep': [],    // 10x10
-            'noble_house': [],    // 6x6
-            'city_shop': [],      // 4x4
-            'fort_wall': []       // Модуль стены
+            'castle_keep': [],    // 6x6
+            'city_house': [],     // 3x3
+            'peasant_hut': []     // 2x2
         };
 
-        // ЦИТАДЕЛЬ (10x10)
-        for(let x=0; x<10; x++) {
-            for(let y=0; y<10; y++) {
+        // Замок (6x6)
+        for(let x=0; x<6; x++) {
+            for(let y=0; y<6; y++) {
                 h.castle_keep.push({x, y, l:'f', t:'floor_citadel_marble'});
-                if(y === 0 || x === 0 || x === 9) h.castle_keep.push({x, y, l:'w', t:'wall_citadel'});
-                if(y < 9) h.castle_keep.push({x, y, l:'r', t:'roof_citadel'});
+                if(y === 0) h.castle_keep.push({x, y, l:'w', t:'wall_citadel'});
+                if(y < 5) h.castle_keep.push({x, y, l:'r', t:'roof_citadel'});
             }
         }
-        h.castle_keep.push({x:5, y:1, l:'d', t:'int_throne'});
-        h.castle_keep.push({x:2, y:2, l:'d', t:'castle_torch'}, {x:7, y:2, l:'d', t:'castle_torch'});
+        h.castle_keep.push({x:3, y:1, l:'d', t:'int_throne'}, {x:1, y:1, l:'d', t:'animated_magic_fire', anim:true});
 
-        // МОДУЛЬ СТЕНЫ (4x1)
-        for(let x=0; x<4; x++) {
-            h.fort_wall.push({x, y:0, l:'w', t:'wall_stone_dark'});
-            h.fort_wall.push({x, y:0, l:'r', t:'wall_stone_dark'}); // Плоская крыша-зубец
-        }
-
-        // КУПЕЧЕСКИЙ ДОМ (4x4)
-        for(let x=0; x<4; x++) {
-            for(let y=0; y<4; y++) {
-                h.city_shop.push({x, y, l:'f', t:'floor_planks'});
-                if(y === 0) h.city_shop.push({x, y, l:'w', t:'wall_timber'});
-                if(y < 3) h.city_shop.push({x, y, l:'r', t:'roof_tile_red'});
+        // Городской дом (3x3)
+        for(let x=0; x<3; x++) {
+            for(let y=0; y<3; y++) {
+                h.city_house.push({x, y, l:'f', t:'floor_planks'});
+                if(y === 0) h.city_house.push({x, y, l:'w', t:'wall_timber'});
+                if(y < 2) h.city_house.push({x, y, l:'r', t:'roof_tile_red'});
             }
         }
-        h.city_shop.push({x:1, y:1, l:'d', t:'market_stall'});
+        h.city_house.push({x:1, y:1, l:'d', t:'int_bookshelf'});
 
-        return h[type] || h.city_shop;
+        // Хижина (2x2)
+        for(let x=0; x<2; x++) {
+            for(let y=0; y<2; y++) {
+                h.peasant_hut.push({x, y, l:'f', t:'floor_planks'});
+                if(y === 0) h.peasant_hut.push({x, y, l:'w', t:'wall_stone_dark'});
+                if(y < 1) h.peasant_hut.push({x, y, l:'r', t:'roof_thatch'});
+            }
+        }
+        h.peasant_hut.push({x:0, y:1, l:'d', t:'tavern_table'});
+
+        return h[type] || h.peasant_hut;
     }
 }

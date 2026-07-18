@@ -66,7 +66,6 @@ export class WorldManager {
             this.player.y = Math.floor(window.innerHeight / 2 + Math.sin(this.animTimer * 15) * 2);
         } else {
             this.player.texture = this.playerFrames[0];
-            this.player.scale.y = 1.0 + Math.sin(this.animTimer * 2) * 0.02;
             this.player.y = Math.floor(window.innerHeight / 2);
         }
 
@@ -87,7 +86,7 @@ export class WorldManager {
             d.timer -= dt;
             if (d.timer <= 0) {
                 d.state = Math.random() > 0.6 ? 'walking' : 'idle';
-                d.timer = 4 + Math.random() * 6;
+                d.timer = 3 + Math.random() * 5;
                 d.vx = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
                 d.vy = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
             }
@@ -113,7 +112,8 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.biome.id}`]);
+                const tileTex = this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`];
+                const tile = new PIXI.Sprite(tileTex);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
@@ -121,7 +121,7 @@ export class WorldManager {
                     BuildingTemplates.getHouseSchema(data.structure).forEach(p => {
                         const wx = (gx + p.x) * 32;
                         const wy = (gy + p.y) * 32;
-                        const tex = p.anim ? (this.envTextures[p.t] || this.envTextures.animated_magic_fire) : (this.envTextures[p.t] || this.buildTextures[p.t]);
+                        const tex = p.anim ? this.envTextures.animated_magic_fire : (this.envTextures[p.t] || this.buildTextures[p.t]);
                         
                         if (p.l === 'r') {
                             const s = new PIXI.Sprite(tex);
@@ -136,23 +136,15 @@ export class WorldManager {
                             worldObjects.push(s);
                         }
                     });
-
-                    // Спавн NPC Стражников у Цитадели
-                    if (data.biome.id === 'citadel' && gx % 8 === 0) {
-                        const guard = NPCFactory.createNPC(this.app, 'knight', '#ecf0f1');
-                        guard.position.set(gx * 32 + 16, gy * 32 + 48);
-                        this.layers.WORLD_OBJECTS.addChild(guard);
-                        this.npcs.push(guard);
-                        worldObjects.push(guard);
-                    }
                 }
 
                 if (data.deco && !data.structure) {
                     const tex = this.envTextures[data.deco];
                     const obj = Array.isArray(tex) ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
+                    const wx = gx * 32 + 16;
+                    const wy = gy * 32 + 32;
                     obj.anchor.set(0.5, 0.95);
-                    obj.position.set(gx * 32 + 16, gy * 32 + 32);
-                    obj.zIndex = obj.y;
+                    obj.position.set(wx, wy); obj.zIndex = wy;
                     if (Array.isArray(tex)) { obj.animationSpeed = 0.1; obj.play(); }
                     this.layers.WORLD_OBJECTS.addChild(obj);
                     worldObjects.push(obj);

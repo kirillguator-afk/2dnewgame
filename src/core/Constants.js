@@ -6,22 +6,20 @@ export const CONFIG = {
     KINGDOM_CENTER: 500000,
     LAYERS: {
         FLOOR: 0,
-        STRUCTURE_BASE: 1,
-        DECOR: 2,
-        PLAYER: 3,
-        STRUCTURE_ROOF: 4,
-        VFX: 5,
-        UI_OVERLAY: 6
+        SHADOWS: 1,
+        WORLD_OBJECTS: 2, 
+        STRUCTURE_ROOF: 3,
+        UI_OVERLAY: 4
     }
 };
 
 export const BIOMES = {
-    CITADEL: { id: 'citadel', color: 0xecf0f1, accent: 0xf1c40f, name: 'Цитадель' },
+    CITADEL: { id: 'citadel', color: 0xe0e0e0, accent: 0xf1c40f, name: 'Цитадель' },
     HIGH_CITY: { id: 'high_city', color: 0x95a5a6, accent: 0x7f8c8d, name: 'Верхний Город' },
     SUBURBS: { id: 'suburbs', color: 0x7f8c8d, accent: 0x2c3e50, name: 'Предместья' },
-    FARMLAND: { id: 'farmland', color: 0x8b4513, accent: 0x5d4037, name: 'Угодья' },
+    FARMLAND: { id: 'farmland', color: 0x8b4513, accent: 0x5d4037, name: 'Пашни' },
     WILDERNESS: { id: 'wild', color: 0x27ae60, accent: 0x1e3a1a, name: 'Дикие Земли' },
-    ROAD: { id: 'road', color: 0x34495e, accent: 0x2c3e50, name: 'Королевский Тракт' }
+    ROAD: { id: 'road', color: 0x3d3126, accent: 0x2d1b0d, name: 'Тракт' }
 };
 
 export const RACES = {

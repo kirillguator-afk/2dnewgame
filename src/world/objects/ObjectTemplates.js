@@ -10,44 +10,69 @@ export class ObjectTemplates {
             textures[name] = app.renderer.generateTexture(g);
         };
 
-        const applyDetail = (gr, x, y, w, h) => {
+        const addGrit = (gr, x, y, w, h) => {
             gr.beginFill(0x000000, 0.1);
             for(let i=0; i<10; i++) gr.drawRect(x + Math.random()*w, y + Math.random()*h, 1, 1);
             gr.endFill();
         };
 
-        // --- ДЕТАЛИ КОРОЛЕВСТВА ---
-        create('citadel_banner', g => {
-            g.beginFill(0x2c3e50).drawRect(15, 0, 2, 32); // Флагшток
-            g.beginFill(0xc0392b).drawPolygon([17, 2, 32, 8, 17, 14]); // Флаг
-            g.beginFill(0xf1c40f).drawCircle(17, 2, 2); // Наконечник
-        });
-
-        create('market_cart', g => {
-            g.beginFill(0x5d4037).drawRect(4, 16, 24, 10);
-            g.beginFill(0x3e2723).drawCircle(8, 26, 6).drawCircle(24, 26, 6);
-            g.beginFill(0x27ae60).drawRect(6, 12, 10, 4); // Яблоки в телеге
-        });
-
-        create('castle_torch', g => {
-            g.beginFill(0x34495e).drawRect(14, 16, 4, 8);
-            g.beginFill(0xe67e22).drawCircle(16, 12, 6);
-        });
-
-        create('garden_statue', g => {
-            g.beginFill(0xbdc3c7).drawRect(8, 24, 16, 8);
-            g.beginFill(0xecf0f1).drawPolygon([10,24, 22,24, 16,4]);
-        });
-
-        // --- ТАЙЛЫ (СИНХРОНИЗАЦИЯ) ---
-        const biomesRef = window.BIOMES_REF || {};
-        Object.values(biomesRef).forEach(b => {
+        // --- ТАЙЛЫ ---
+        Object.values(window.BIOMES_REF || {}).forEach(b => {
             create(`tile_${b.id}`, g => {
                 g.beginFill(b.color).drawRect(0, 0, 32, 32);
                 g.beginFill(b.accent, 0.1).drawRect(0,0,32,1).drawRect(0,0,1,32);
-                applyDetail(g, 0, 0, 32, 32);
+                addGrit(g, 0, 0, 32, 32);
             });
         });
+
+        // --- ИНТЕРЬЕР (МЕБЕЛЬ) ---
+        create('int_throne', g => {
+            g.beginFill(0x5d4037).drawRect(8, 16, 16, 12);
+            g.beginFill(0xc0392b).drawRect(10, 4, 12, 16);
+            g.beginFill(0xf1c40f).drawRect(6, 14, 4, 14).drawRect(22, 14, 4, 14);
+        });
+
+        create('int_bookshelf', g => {
+            g.beginFill(0x3e2723).drawRect(2, 4, 28, 28);
+            g.beginFill(0x8d6e63).drawRect(4, 10, 24, 2).drawRect(4, 20, 24, 2);
+            g.beginFill(0x2980b9).drawRect(6, 6, 3, 4).beginFill(0xc0392b).drawRect(12, 6, 2, 4);
+        });
+
+        create('tavern_table', g => {
+            g.beginFill(0x5d4037).drawRect(4, 12, 24, 4).drawRect(6, 16, 4, 12).drawRect(22, 16, 4, 12);
+        });
+
+        create('market_stall', g => {
+            g.beginFill(0x5d4037).drawRect(2, 22, 28, 6);
+            g.beginFill(0xc0392b).drawRect(0, 4, 32, 6);
+            g.lineStyle(2, 0x3e2723).moveTo(4,10).lineTo(4,22).moveTo(28,10).lineTo(28,22);
+        });
+
+        // --- ДЕКОР ---
+        create('castle_torch', g => {
+            g.beginFill(0x34495e).drawRect(14, 18, 4, 8);
+            g.beginFill(0xe67e22).drawCircle(16, 14, 5);
+        });
+
+        create('village_haystack', g => {
+            g.beginFill(0xf1c40f).drawPolygon([4,32, 28,32, 16,8]);
+            g.beginFill(0xd4af37, 0.5).drawRect(8, 28, 16, 2);
+        });
+
+        create('nature_oak', g => {
+            g.beginFill(0x2d1b0d).drawRect(12, 16, 8, 16);
+            g.beginFill(0x1e3a1a).drawCircle(16, 10, 14).drawCircle(8, 14, 10).drawCircle(24, 14, 10);
+        });
+
+        // --- АНИМАЦИИ ---
+        const magFire = [];
+        for(let i=0; i<4; i++) {
+            g.clear();
+            g.beginFill(0x2c3e50).drawCircle(16, 28, 7);
+            g.beginFill(0x3498db).drawPolygon([10,24, 16, 4+i*3, 22,24]);
+            magFire.push(app.renderer.generateTexture(g));
+        }
+        textures.animated_magic_fire = magFire;
 
         return textures;
     }

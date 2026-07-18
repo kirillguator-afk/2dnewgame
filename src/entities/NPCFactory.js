@@ -30,20 +30,22 @@ export class NPCFactory {
         const b = frame === 1 ? 2 : 0;
         g.clear();
         
+        // Тень
         g.beginFill(0x000000, 0.2).drawEllipse(16, 28, 8, 3).endFill();
 
-        if (type === 'deer') {
-            g.beginFill(0x8d6e63).drawRect(10, 14+b, 12, 10); // Тело
-            g.beginFill(0x5d4037).drawRect(20, 6+b, 4, 10); // Шея
-            g.beginFill(0x8d6e63).drawRect(20, 4+b, 6, 6); // Голова
-            g.lineStyle(1, 0x3d2b1f).moveTo(22,4+b).lineTo(20,0+b).moveTo(24,4+b).lineTo(26,0+b); // Рога
-            g.beginFill(0x1a1a1a).drawRect(10, 24, 2, 4).drawRect(18, 24, 2, 4); // Ноги
-        } else if (type === 'bird') {
-            g.beginFill(0x2f3542).drawCircle(16, 16+b, 3);
-            g.beginFill(0x747d8c).drawPolygon([16,16+b, 10,14+b, 16,18+b]).drawPolygon([16,16+b, 22,14+b, 16,18+b]); // Крылья
+        if (type === 'cow') {
+            g.beginFill(0xffffff).drawRect(6, 14+b, 20, 12);
+            g.beginFill(0x000000).drawRect(8, 16+b, 6, 6).drawRect(18, 18+b, 4, 4);
+            g.beginFill(0xffffff).drawRect(24, 12+b, 8, 8); // Голова
+        } else if (type === 'knight') {
+            g.beginFill(0x95a5a6).drawRect(10, 2+b, 12, 10); // Шлем
+            g.beginFill(0xbdc3c7).drawRect(7, 12, 18, 14); // Панцирь
+            g.beginFill(0xc0392b).drawRect(15, 0+b, 2, 4); // Плюмаж
+            g.beginFill(0xecf0f1).drawRect(26, 10, 2, 12); // Меч
         } else {
-            // Стандартный человекоподобный
+            // Обычный житель
             g.beginFill(0xe0ac69).drawRect(11, 4+b, 10, 10);
+            g.beginFill(0x000000).drawRect(13, 8+b, 2, 2).drawRect(17, 8+b, 2, 2);
             g.beginFill(color).drawRect(9, 14, 14, 10);
             g.beginFill(0x333333).drawRect(10, 24, 4, 6-b).drawRect(18, 24, 4, 4+b);
         }

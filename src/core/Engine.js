@@ -13,50 +13,52 @@ export class Engine {
     }
 
     async init(containerId) {
-        // 1. СРАЗУ вешаем обработчик на главную кнопку, не дожидаясь PIXI
-        const enterBtn = document.getElementById('enter-btn');
-        if (enterBtn) {
-            enterBtn.onclick = () => {
-                if (!this.isInitialized) {
-                    console.warn("Мир еще загружается...");
-                    return;
-                }
-                this.showCharacterCreator();
-            };
-        }
-
-        // 2. Инициализируем PIXI
-        this.app = new PIXI.Application({
-            resizeTo: window,
-            backgroundColor: 0x050505,
-            antialias: false,
-            resolution: window.devicePixelRatio || 1,
-        });
-
-        const container = document.getElementById(containerId);
-        if (container) container.appendChild(this.app.view);
-
-        this.input = new InputHandler();
-        this.world = new WorldManager(this.app);
-        
-        // 3. Загружаем ресурсы
         try {
+            // 1. Привязка UI кнопок ДО загрузки PIXI
+            const enterBtn = document.getElementById('enter-btn');
+            if (enterBtn) {
+                enterBtn.onclick = () => {
+                    if (this.isInitialized) {
+                        this.showCharacterCreator();
+                    } else {
+                        enterBtn.innerText = "ЗАГРУЗКА...";
+                    }
+                };
+            }
+
+            // 2. Старт PIXI
+            this.app = new PIXI.Application({
+                resizeTo: window,
+                backgroundColor: 0x050505,
+                antialias: false,
+                resolution: window.devicePixelRatio || 1,
+            });
+
+            const container = document.getElementById(containerId);
+            if (container) container.appendChild(this.app.view);
+
+            this.input = new InputHandler();
+            this.world = new WorldManager(this.app);
+            
+            // 3. Загрузка ресурсов мира
             await this.world.loadResources();
+            
+            // 4. Инициализация логики создания персонажа
+            this.creator = new CharacterCreator((data) => this.startGame(data));
+
             this.isInitialized = true;
-            console.log("Engine: Ресурсы загружены");
-        } catch (e) {
-            console.error("Engine: Ошибка загрузки ресурсов", e);
+            if (enterBtn) enterBtn.innerText = "ВОЙТИ В МИР";
+
+            // 5. Главный цикл
+            this.app.ticker.add((delta) => this.update(delta));
+            
+        } catch (error) {
+            console.error("Критическая ошибка инициализации:", error);
         }
-
-        // 4. Инициализируем создатель персонажа (он скрыт в HTML)
-        this.creator = new CharacterCreator((data) => this.startGame(data));
-
-        // 5. Запускаем тикер
-        this.app.ticker.add((delta) => this.update(delta));
     }
 
     showCharacterCreator() {
-        document.getElementById('splash-screen').classList.add('hidden');
+        document.getElementById('splash-screen').style.display = 'none';
         document.getElementById('creator-overlay').classList.remove('hidden');
         this.gameState = 'CREATOR';
     }
@@ -65,8 +67,9 @@ export class Engine {
         this.gameState = 'PLAYING';
         document.getElementById('hud-name').innerText = data.name;
         document.getElementById('hud-race-label').innerText = data.race;
+        document.getElementById('ui-layer').classList.remove('hidden');
+        
         this.world.setup(data);
-        console.log("Engine: Игра началась");
     }
 
     update(delta) {

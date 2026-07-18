@@ -1,39 +1,31 @@
 
-import { KineticSystem } from '../systems/KineticSystem.js';
-import { BuildingSystem } from './BuildingSystem.js';
 import { TerrainGenerator } from './TerrainGenerator.js';
-import { VfxSystem } from '../systems/VfxSystem.js';
 import { AtmosphereSystem } from '../systems/AtmosphereSystem.js';
 import { CharacterFactory } from '../entities/CharacterFactory.js';
 import { ObjectTemplates } from './objects/ObjectTemplates.js';
 import { BuildingTemplates } from './objects/BuildingTemplates.js';
-import { CONFIG, BIOMES } from '../core/Constants.js';
+import { CONFIG } from '../core/Constants.js';
 
 export class WorldManager {
     constructor(app) {
         this.app = app;
-        // Стартовая позиция в центре бесконечного мира
         this.cameraPos = { x: 500000 * 32, y: 500000 * 32 };
         this.loadedChunks = new Map();
-        this.entities = new Map();
         
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
         
-        // Создаем слои СРАЗУ в конструкторе
+        // СТРОГАЯ инициализация слоев по порядку из CONFIG
         this.layers = {};
-        const layerNames = Object.keys(CONFIG.LAYERS);
-        layerNames.forEach((name) => {
+        const sortedLayerKeys = Object.entries(CONFIG.LAYERS).sort((a, b) => a[1] - b[1]);
+        
+        sortedLayerKeys.forEach(([name, index]) => {
             const container = new PIXI.Container();
             this.app.stage.addChild(container);
             this.layers[name] = container;
         });
 
         this.generator = new TerrainGenerator(Date.now());
-        this.kineticSystem = new KineticSystem();
-        this.vfxSystem = new VfxSystem(this.app, this.layers.VFX);
         this.atmosphere = new AtmosphereSystem(this.app, this.layers.ATMOSPHERE);
-        this.buildingSystem = new BuildingSystem(this);
-        
         this.animTimer = 0;
         this.player = null;
     }
@@ -41,38 +33,36 @@ export class WorldManager {
     async loadResources() {
         this.envTextures = ObjectTemplates.generate(this.app);
         this.buildTextures = BuildingTemplates.getTemplates(this.app);
+        
         const g = new PIXI.Graphics();
         g.beginFill(0xFFFFFF).drawRect(0, 0, 32, 32).endFill();
         this.baseTileTex = this.app.renderer.generateTexture(g);
+        
+        const colorMatrix = new PIXI.ColorMatrixFilter();
+        colorMatrix.contrast(0.1);
+        colorMatrix.saturate(0.05);
+        this.app.stage.filters = [colorMatrix];
     }
 
     setup(charData) {
-        this.charData = charData;
         const charAssets = CharacterFactory.createRaceTexture(this.app, charData.race, charData.color);
         this.playerFrames = charAssets.frames;
         
-        // Очищаем слои игрока на случай рестарта
         this.layers.PLAYER_SHADOW.removeChildren();
         this.layers.PLAYER.removeChildren();
 
-        // Тень
         this.playerShadow = new PIXI.Sprite(charAssets.shadow);
         this.playerShadow.anchor.set(0.5);
         this.layers.PLAYER_SHADOW.addChild(this.playerShadow);
 
-        // Персонаж
         this.player = new PIXI.Sprite(this.playerFrames[0]);
         this.player.anchor.set(0.5, 1.0);
         this.layers.PLAYER.addChild(this.player);
         
-        // Позиция на экране (центр)
         this.player.position.set(window.innerWidth / 2, window.innerHeight / 2);
         this.playerShadow.position.set(window.innerWidth / 2, window.innerHeight / 2);
 
-        this.moveSpeed = 220 + (charData.stats.dex * 8);
-        this.buildingSystem.setup();
-        
-        // Инициализируем первые чанки вокруг игрока
+        this.moveSpeed = 220 + (charData.stats.dex * 10);
         this.manageChunks();
     }
 
@@ -92,8 +82,8 @@ export class WorldManager {
             this.player.y = (window.innerHeight / 2) + Math.sin(this.animTimer * 12) * 2;
         } else {
             this.player.texture = this.playerFrames[0];
-            this.player.y = (window.innerHeight / 2) + Math.sin(this.animTimer * 2) * 1;
             this.player.scale.y = 1.0 + Math.sin(this.animTimer * 2) * 0.01;
+            this.player.y = window.innerHeight / 2;
         }
 
         this.atmosphere.update(dt, this.cameraPos);
@@ -130,7 +120,7 @@ export class WorldManager {
                 
                 const tile = new PIXI.Sprite(this.baseTileTex);
                 tile.position.set(tx * 32, ty * 32);
-                tile.tint = data.isRoad ? 0x3d3d3d : data.biome.color;
+                tile.tint = data.isRoad ? 0x3a3a3a : data.biome.color;
                 bodyCont.addChild(tile);
 
                 if (data.structureType) {
@@ -178,7 +168,9 @@ export class WorldManager {
         
         this.loadedChunks.forEach(chunk => {
             chunk.roof.children.forEach(roofTile => {
-                const distSq = Math.pow(roofTile.userData.gx - px, 2) + Math.pow(roofTile.userData.gy - py, 2);
+                const dx = roofTile.userData.gx - px;
+                const dy = roofTile.userData.gy - py;
+                const distSq = dx*dx + dy*dy;
                 roofTile.alpha = distSq < 4 ? 0.3 : 1.0;
             });
         });
@@ -187,9 +179,7 @@ export class WorldManager {
     renderChunks() {
         const ox = Math.round(-this.cameraPos.x + window.innerWidth / 2);
         const oy = Math.round(-this.cameraPos.y + window.innerHeight / 2);
-        
         this.layers.FLOOR.position.set(ox, oy);
         this.layers.STRUCTURE_ROOF.position.set(ox, oy);
-        this.layers.VFX.position.set(ox, oy);
     }
 }

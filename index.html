@@ -12,7 +12,6 @@
         body { margin: 0; overflow: hidden; background: #050505; font-family: 'Crimson Pro', serif; color: #f5f6fa; }
         canvas { display: block; image-rendering: pixelated; }
         
-        /* Глобальные 3D эффекты */
         .perspective-root {
             perspective: 1200px;
             height: 100vh;
@@ -20,15 +19,19 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: absolute;
+            top: 0; left: 0;
+            pointer-events: none;
         }
 
         .rpg-panel-3d { 
             background: linear-gradient(145deg, #2c313c, #1a1e26);
             border: 4px solid #8c7e6d;
-            box-shadow: 0 50px 100px rgba(0,0,0,0.9);
-            transform: rotateX(5deg) rotateY(-5deg);
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+            transform: rotateX(8deg) rotateY(-12deg);
             transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            pointer-events: auto;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
         .rpg-panel-3d:hover {
@@ -42,7 +45,7 @@
             font-family: 'Ruslan Display', cursive;
             text-shadow: 2px 2px 0 #000;
             box-shadow: 0 4px 0 #3d2b1f;
-            transition: all 0.1s;
+            cursor: pointer;
         }
         
         .rpg-button:active {
@@ -56,46 +59,52 @@
         #splash-screen {
             background: radial-gradient(circle at center, #2d5a27 0%, #050505 100%);
             z-index: 100;
+            position: fixed;
+            inset: 0;
         }
 
         .floating { animation: floating 4s ease-in-out infinite; }
         @keyframes floating {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
+            50% { transform: translateY(-15px); }
         }
 
         input, select {
-            background: rgba(0,0,0,0.5) !important;
+            background: rgba(0,0,0,0.6) !important;
             border: 2px solid #4a3f35 !important;
             color: #af9164 !important;
-            padding: 10px;
+            padding: 8px 12px;
+            outline: none;
         }
+
+        #ui-layer { z-index: 40; pointer-events: none; }
+        .pointer-events-auto { pointer-events: auto; }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
 
-    <!-- Заставка -->
-    <div id="splash-screen" class="fixed inset-0 flex flex-col items-center justify-center p-10">
-        <div class="floating text-center">
-            <h1 class="text-8xl text-yellow-600 font-['Ruslan_Display'] mb-2 drop-shadow-2xl">ANCIENT GEAR</h1>
-            <p class="text-2xl text-yellow-100/40 uppercase tracking-[0.8em] mb-12">Древние Технологии</p>
+    <!-- Главное меню -->
+    <div id="splash-screen" class="flex flex-col items-center justify-center p-10">
+        <div class="floating text-center mb-12">
+            <h1 class="text-7xl md:text-9xl text-yellow-600 font-['Ruslan_Display'] drop-shadow-2xl">ANCIENT GEAR</h1>
+            <p class="text-2xl text-yellow-100/40 uppercase tracking-[0.6em]">Древние Технологии</p>
         </div>
-        <button id="enter-btn" class="rpg-button px-16 py-6 text-3xl uppercase tracking-widest">Войти в мир</button>
+        <button id="enter-btn" class="rpg-button px-20 py-8 text-4xl uppercase tracking-widest">Войти в мир</button>
     </div>
 
     <!-- Создание персонажа -->
-    <div id="creator-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 perspective-root">
+    <div id="creator-overlay" class="hidden fixed inset-0 z-50 perspective-root bg-black/80">
         <div class="rpg-panel-3d w-full max-w-5xl p-12 flex flex-col md:flex-row gap-12">
             <div class="flex-1">
                 <h2 class="text-5xl font-['Ruslan_Display'] text-yellow-500 mb-8 border-b border-yellow-900/30 pb-4">Свиток Героя</h2>
                 <div class="space-y-6">
                     <div>
                         <label class="text-xs uppercase text-yellow-700 font-bold mb-2 block">Имя Путешественника</label>
-                        <input id="char-name" type="text" maxlength="12" placeholder="Ваше имя..." class="w-full text-xl outline-none">
+                        <input id="char-name" type="text" maxlength="12" placeholder="Имя..." class="w-full text-xl">
                     </div>
                     <div>
-                        <label class="text-xs uppercase text-yellow-700 font-bold mb-2 block">Древнее Происхождение</label>
+                        <label class="text-xs uppercase text-yellow-700 font-bold mb-2 block">Происхождение</label>
                         <select id="char-race" class="w-full text-xl">
                             <option value="HUMAN">Человек (Королевство)</option>
                             <option value="DWARVEN">Дворф (Подгорье)</option>
@@ -111,31 +120,31 @@
             </div>
             
             <div class="flex-1 flex flex-col justify-between">
-                <div class="bg-black/30 p-6 border border-yellow-900/20">
+                <div class="bg-black/30 p-6 border border-yellow-900/20 shadow-inner">
                     <div class="flex justify-between items-center mb-6">
-                        <span class="text-yellow-600 text-lg uppercase font-bold">Очки навыков</span>
+                        <span class="text-yellow-600 text-lg uppercase font-bold">Свободные очки</span>
                         <span id="stat-points" class="text-5xl font-['Ruslan_Display']">20</span>
                     </div>
                     <div id="stat-container" class="space-y-6"><!-- Характеристики --></div>
                 </div>
-                <button id="start-btn" class="rpg-button w-full py-6 text-3xl mt-8">Начать путь</button>
+                <button id="start-btn" class="rpg-button w-full py-6 text-3xl mt-8">Начать приключение</button>
             </div>
         </div>
     </div>
 
     <!-- Игровой HUD -->
-    <div id="ui-layer" class="hidden fixed inset-0 pointer-events-none p-8 flex flex-col justify-between">
+    <div id="ui-layer" class="hidden fixed inset-0 p-8 flex flex-col justify-between">
         <div class="flex justify-between items-start">
             <div class="rpg-panel-3d p-6 w-72 pointer-events-auto" style="transform: none;">
                 <div id="hud-name" class="font-bold text-2xl text-yellow-500 font-['Ruslan_Display']">---</div>
                 <div class="stat-bar mt-3"><div class="stat-bar-fill"></div></div>
                 <div class="flex justify-between mt-2 text-[10px] uppercase font-bold text-gray-500">
-                    <span>Здоровье</span>
+                    <span>Жизнь</span>
                     <span id="hud-race-label">---</span>
                 </div>
             </div>
             <div class="rpg-panel-3d p-4 pointer-events-auto" style="transform: none;">
-                <div id="coords" class="text-sm font-mono text-yellow-600">X: 0 Y: 0</div>
+                <div id="coords" class="text-sm font-mono text-yellow-600 font-bold">X: 0 Y: 0</div>
             </div>
         </div>
     </div>

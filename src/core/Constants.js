@@ -3,31 +3,51 @@ export const CONFIG = {
     TILE_SIZE: 32,
     CHUNK_SIZE: 16,
     WORLD_SIZE: 1000000,
-    VILLAGE_RADIUS: 5,
-    // Порядок слоев в PIXI stage
+    SEA_LEVEL: 0.25,
     LAYERS: {
-        FLOOR: 0,           // Земля
-        SHADOWS: 1,         // Тени
-        WORLD_OBJECTS: 2,   // Игрок, Деревья, Здания (Y-Sorted)
-        ROOFS: 3,           // Крыши (прозрачные)
-        UI_OVERLAY: 4       // HUD
+        FLOOR: 0,
+        SHADOWS: 1,
+        WORLD_OBJECTS: 2, 
+        ROOFS: 3,
+        UI_OVERLAY: 4
     }
 };
 
+// Расширенная матрица биомов (Whittaker Climate Map)
 export const BIOMES = {
-    OCEAN: { id: 'ocean', color: 0x0a3d62, accent: 0x3c6382, name: 'Океан' },
-    BEACH: { id: 'beach', color: 0xf6b93b, accent: 0xfa983a, name: 'Побережье' },
-    FOREST: { id: 'forest', color: 0x38ada9, accent: 0x079992, name: 'Лес' },
-    WASTELAND: { id: 'wasteland', color: 0x825a2c, accent: 0x5d4037, name: 'Пустошь' },
-    MOUNTAINS: { id: 'mountains', color: 0x60a3bc, accent: 0x3c6382, name: 'Горы' },
-    SNOW: { id: 'snow', color: 0xf1f2f6, accent: 0xd1d8e0, name: 'Снега' },
-    SWAMP: { id: 'swamp', color: 0x1e370a, accent: 0x3d5a27, name: 'Болото' },
-    VILLAGE: { id: 'village', color: 0x4b4b4b, accent: 0x2f3542, name: 'Поселение' }
+    // Водные
+    DEEP_OCEAN: { id: 'deep_ocean', color: 0x0a1931, accent: 0x001233, name: 'Бездна' },
+    OCEAN: { id: 'ocean', color: 0x185adb, accent: 0x0a1931, name: 'Океан' },
+    REEF: { id: 'reef', color: 0x00d2ff, accent: 0x3a7bd5, name: 'Коралловые Рифы' },
+    
+    // Береговые
+    BEACH: { id: 'beach', color: 0xffcc80, accent: 0xff9800, name: 'Побережье' },
+    
+    // Засушливые
+    DESERT: { id: 'desert', color: 0xedc9af, accent: 0xd2b48c, name: 'Пустыня' },
+    SAVANNA: { id: 'savanna', color: 0xc4a484, accent: 0x8b4513, name: 'Саванна' },
+    WASTELAND: { id: 'wasteland', color: 0x6d4c41, accent: 0x3e2723, name: 'Пустошь' },
+    
+    // Умеренные
+    PLAINS: { id: 'plains', color: 0x7cb342, accent: 0x558b2f, name: 'Равнины' },
+    FOREST: { id: 'forest', color: 0x2e7d32, accent: 0x1b5e20, name: 'Густой Лес' },
+    JUNGLE: { id: 'jungle', color: 0x004d40, accent: 0x00241a, name: 'Джунгли' },
+    
+    // Холодные
+    TAIGA: { id: 'taiga', color: 0x455a64, accent: 0x263238, name: 'Тайга' },
+    TUNDRA: { id: 'tundra', color: 0x90a4ae, accent: 0x546e7a, name: 'Тундра' },
+    SNOW: { id: 'snow', color: 0xe3f2fd, accent: 0xbbdefb, name: 'Ледники' },
+    
+    // Горные
+    MOUNTAINS: { id: 'mountains', color: 0x424242, accent: 0x212121, name: 'Горы' },
+    PEAKS: { id: 'peaks', color: 0xffffff, accent: 0xb0bec5, name: 'Пики' },
+    
+    VILLAGE: { id: 'village', color: 0x5d4037, accent: 0xffeb3b, name: 'Поселение' }
 };
 
 export const RACES = {
     HUMAN: { name: 'Человек', color: '#ffffff', stats: { str: 5, dex: 5, int: 5, tec: 5 } },
-    DWARVEN: { name: 'Дворф', color: '#e67e22', stats: { str: 8, dex: 2, int: 4, tec: 6 } },
-    ELVEN: { name: 'Эльф', color: '#2ecc71', stats: { str: 3, dex: 8, int: 6, tec: 3 } },
-    ORCISH: { name: 'Орк', color: '#c0392b', stats: { str: 9, dex: 4, int: 2, tec: 5 } }
+    DWARVEN: { name: 'Дворф', color: '#ffa726', stats: { str: 8, dex: 2, int: 4, tec: 6 } },
+    ELVEN: { name: 'Эльф', color: '#66bb6a', stats: { str: 3, dex: 8, int: 7, tec: 2 } },
+    ORCISH: { name: 'Орк', color: '#ef5350', stats: { str: 9, dex: 4, int: 2, tec: 5 } }
 };

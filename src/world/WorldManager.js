@@ -8,16 +8,12 @@ import { CONFIG, BIOMES } from '../core/Constants.js';
 export class WorldManager {
     constructor(app) {
         this.app = app;
-        // Глобальные координаты игрока
         this.cameraPos = { x: 500000 * 32, y: 500000 * 32 };
         this.loadedChunks = new Map();
+        window.BIOMES_REF = BIOMES; // Для ObjectTemplates
         
-        // Рендеринг без размытия
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
         
-        // Принудительно пробрасываем BIOMES для шаблонов
-        window.BIOMES_REF = BIOMES;
-
         this.layers = {};
         this.initLayers();
 
@@ -27,8 +23,7 @@ export class WorldManager {
     }
 
     initLayers() {
-        const sorted = Object.entries(CONFIG.LAYERS).sort((a,b) => a[1] - b[1]);
-        sorted.forEach(([name]) => {
+        Object.entries(CONFIG.LAYERS).sort((a,b) => a[1] - b[1]).forEach(([name]) => {
             const c = new PIXI.Container();
             if (name === 'WORLD_OBJECTS') c.sortableChildren = true;
             this.app.stage.addChild(c);
@@ -39,23 +34,15 @@ export class WorldManager {
     async loadResources() {
         this.envTextures = ObjectTemplates.generate(this.app);
         this.buildTextures = BuildingTemplates.getTemplates(this.app);
-        
-        // Базовая плитка-заглушка
-        const g = new PIXI.Graphics();
-        g.beginFill(0xff00ff).drawRect(0,0,32,32); // Яркий розовый если текстура не найдена
-        this.fallbackTex = this.app.renderer.generateTexture(g);
     }
 
     setup(charData) {
         const assets = CharacterFactory.createRaceTexture(this.app, charData.race, charData.color);
         this.playerFrames = assets.frames;
-        
-        // Тень
         this.playerShadow = new PIXI.Sprite(assets.shadow);
         this.playerShadow.anchor.set(0.5);
         this.layers.SHADOWS.addChild(this.playerShadow);
 
-        // Игрок
         this.player = new PIXI.Sprite(this.playerFrames[0]);
         this.player.anchor.set(0.5, 0.95);
         this.layers.WORLD_OBJECTS.addChild(this.player);
@@ -66,7 +53,6 @@ export class WorldManager {
 
     update(dt, input) {
         if (!this.player) return;
-
         let moving = false;
         if (input.isKeyDown('KeyW')) { this.cameraPos.y -= this.moveSpeed * dt; moving = true; }
         if (input.isKeyDown('KeyS')) { this.cameraPos.y += this.moveSpeed * dt; moving = true; }
@@ -74,20 +60,16 @@ export class WorldManager {
         if (input.isKeyDown('KeyD')) { this.cameraPos.x += this.moveSpeed * dt; this.player.scale.x = 1; moving = true; }
 
         this.animTimer += dt;
-        
-        // Анимация игрока
         if (moving) {
             this.player.texture = this.playerFrames[Math.floor(this.animTimer * 10) % 2];
-            this.player.skew.x = Math.sin(this.animTimer * 10) * 0.1;
+            this.player.y = Math.floor(window.innerHeight / 2 + Math.sin(this.animTimer * 15) * 2);
         } else {
             this.player.texture = this.playerFrames[0];
             this.player.scale.y = 1.0 + Math.sin(this.animTimer * 2) * 0.02;
-            this.player.skew.x = 0;
+            this.player.y = Math.floor(window.innerHeight / 2);
         }
 
-        // Обновляем zIndex игрока для Y-сортировки
         this.player.zIndex = Math.floor(this.cameraPos.y);
-
         this.manageChunks();
         this.renderWorld();
         this.handleTransparency();
@@ -110,8 +92,6 @@ export class WorldManager {
         const floor = new PIXI.Container();
         const roofs = new PIXI.Container();
         const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
-        
-        // Контейнеры чанка позиционируются в мировых координатах
         floor.position.set(cx * chunkPx, cy * chunkPx);
         roofs.position.set(cx * chunkPx, cy * chunkPx);
 
@@ -121,20 +101,15 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                // 1. Трава / Земля
-                const tileTex = this.envTextures[`tile_${data.biome.id}`] || this.fallbackTex;
-                const tile = new PIXI.Sprite(tileTex);
+                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.biome.id}`]);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
-                // 2. Строения
                 if (data.structureType) {
                     BuildingTemplates.getHouseSchema(data.structureType).forEach(p => {
                         const s = new PIXI.Sprite(this.buildTextures[p.t]);
-                        // Глобальные координаты для объектов в WORLD_OBJECTS
                         const wx = (cx * chunkPx) + (tx + p.x) * 32;
                         const wy = (cy * chunkPx) + (ty + p.y) * 32;
-                        
                         if (p.l === 'r') {
                             s.position.set((tx + p.x) * 32, (ty + p.y) * 32);
                             s.userData = { gx: gx + p.x, gy: gy + p.y };
@@ -147,23 +122,19 @@ export class WorldManager {
                     });
                 }
 
-                // 3. Декор
                 if (data.decoType) {
                     const tex = this.envTextures[data.decoType];
                     const obj = data.isAnimated ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
                     const wx = (cx * chunkPx) + tx * 32 + 16;
                     const wy = (cy * chunkPx) + ty * 32 + 32;
-                    
                     obj.anchor.set(0.5, 0.95);
                     obj.position.set(wx, wy);
                     obj.zIndex = wy;
-                    
                     if (data.isAnimated) { obj.animationSpeed = 0.1; obj.play(); }
                     this.layers.WORLD_OBJECTS.addChild(obj);
                 }
             }
         }
-        
         this.layers.FLOOR.addChild(floor);
         this.layers.ROOFS.addChild(roofs);
         this.loadedChunks.set(`${cx},${cy}`, { floor, roofs });
@@ -172,26 +143,22 @@ export class WorldManager {
     handleTransparency() {
         const px = Math.floor(this.cameraPos.x / 32);
         const py = Math.floor(this.cameraPos.y / 32);
-        
         this.layers.ROOFS.children.forEach(chunk => {
             chunk.children.forEach(r => {
-                const distSq = Math.pow(r.userData.gx - px, 2) + Math.pow(r.userData.gy - py, 2);
-                r.alpha = distSq < 4 ? 0.3 : 1.0;
+                const dx = r.userData.gx - px;
+                const dy = r.userData.gy - py;
+                r.alpha = (dx*dx + dy*dy < 4) ? 0.3 : 1.0;
             });
         });
     }
 
     renderWorld() {
-        // Камера: Центр экрана - Позиция в мире
         const ox = Math.floor(window.innerWidth / 2 - this.cameraPos.x);
         const oy = Math.floor(window.innerHeight / 2 - this.cameraPos.y);
-        
         this.layers.FLOOR.position.set(ox, oy);
         this.layers.SHADOWS.position.set(ox, oy);
         this.layers.WORLD_OBJECTS.position.set(ox, oy);
         this.layers.ROOFS.position.set(ox, oy);
-        
-        // Помещаем игрока в его мировые координаты (внутри слоя, который уже смещен камерой)
         this.player.position.set(this.cameraPos.x, this.cameraPos.y);
         this.playerShadow.position.set(this.cameraPos.x, this.cameraPos.y + 2);
     }

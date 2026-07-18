@@ -19,7 +19,7 @@ export class TerrainGenerator {
         const dy = gy - this.centerY;
         const dist = Math.sqrt(dx*dx + dy*dy);
 
-        // Зонирование
+        // --- ЛОГИКА ЗОНИРОВАНИЯ ---
         let biome = BIOMES.WILDERNESS;
         if (dist < 100) biome = BIOMES.CITADEL;
         else if (dist < 300) biome = BIOMES.HIGH_CITY;
@@ -35,26 +35,26 @@ export class TerrainGenerator {
         let npc = null;
         const objVal = (this.noises.objects.perlin(gx * 0.5, gy * 0.5) + 1) / 2;
 
-        // ЛОГИКА ГЕНЕРАЦИИ РАЗНООБРАЗНЫХ ЗДАНИЙ
         if (!isRoad) {
-            const seed = Math.abs(gx * 17 + gy * 31) % 100;
+            const h = Math.abs(gx * 31 + gy * 7) % 100; // Детерминированный хэш для типа здания
             
+            // Распределение зданий по зонам
             if (biome.id === 'citadel' && gx % 30 === 0 && gy % 30 === 0) {
-                structure = `noble_${seed % 5}`;
+                structure = `n_${h % 5}`; // Noble
             } 
             else if (biome.id === 'high_city' && gx % 20 === 0 && gy % 20 === 0) {
-                structure = seed > 50 ? `tavern_${seed % 10}` : `noble_${seed % 5}`;
+                structure = (h > 60) ? `t_${h % 10}` : `n_${h % 5}`; // Tavern or Noble
             }
             else if (biome.id === 'suburbs' && gx % 16 === 0 && gy % 16 === 0) {
-                structure = seed > 80 ? `tavern_${seed % 10}` : `villager_${seed % 10}`;
+                structure = (h > 80) ? `t_${h % 10}` : `v_${h % 10}`; // Tavern or Villager
             }
             else if (biome.id === 'farmland' && gx % 24 === 0 && gy % 24 === 0) {
-                structure = `villager_${seed % 10}`;
+                structure = `v_${h % 10}`; // Villager
             }
 
             // Декор
             if (!structure) {
-                if (biome.id === 'wild' && objVal > 0.9) deco = (gx % 2 === 0) ? 'nature_tree_1' : 'nature_tree_2';
+                if (biome.id === 'wild' && objVal > 0.9) deco = 'nature_tree_oak';
                 if (biome.id === 'farmland' && objVal > 0.7) deco = 'nature_wheat';
             }
         }

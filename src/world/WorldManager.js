@@ -12,7 +12,7 @@ export class WorldManager {
         this.cameraPos = { x: CONFIG.KINGDOM_CENTER * 32, y: CONFIG.KINGDOM_CENTER * 32 };
         this.loadedChunks = new Map();
         
-        // ФИКС: Гарантированная установка BIOMES до начала работы других систем
+        // Гарантированная ссылка для статических классов
         window.BIOMES_REF = BIOMES;
         
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
@@ -35,11 +35,22 @@ export class WorldManager {
     }
 
     async loadResources() {
+        // Передаем BIOMES напрямую для безопасности
         this.envTextures = ObjectTemplates.generate(this.app, BIOMES);
         this.buildTextures = BuildingTemplates.getTemplates(this.app);
+        
+        // Резервная текстура
+        const g = new PIXI.Graphics();
+        g.beginFill(0x333333).drawRect(0,0,32,32);
+        this.fallbackTex = this.app.renderer.generateTexture(g);
     }
 
     setup(charData) {
+        // Очистка при старте
+        this.layers.SHADOWS.removeChildren();
+        this.layers.WORLD_OBJECTS.removeChildren();
+        this.npcs = [];
+
         const assets = CharacterFactory.createRaceTexture(this.app, charData.raceId || 'HUMAN', charData.color);
         this.playerFrames = assets.frames;
         this.playerShadow = new PIXI.Sprite(assets.shadow);
@@ -95,15 +106,18 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`]);
+                const tileTex = this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`] || this.fallbackTex;
+                const tile = new PIXI.Sprite(tileTex);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
                 if (data.structure) {
-                    BuildingTemplates.getHouseSchema(data.structure).forEach(p => {
+                    const schema = BuildingTemplates.getHouseSchema(data.structure);
+                    schema.forEach(p => {
                         const wx = (gx + p.x) * 32;
                         const wy = (gy + p.y) * 32;
-                        const tex = this.envTextures[p.t] || this.buildTextures[p.t] || this.envTextures.floor_planks;
+                        const tex = this.envTextures[p.t] || this.buildTextures[p.t] || this.fallbackTex;
+                        
                         if (p.l === 'r') {
                             const s = new PIXI.Sprite(tex);
                             s.position.set((tx + p.x) * 32, (ty + p.y) * 32);
@@ -111,20 +125,23 @@ export class WorldManager {
                             roofs.addChild(s);
                         } else {
                             const s = new PIXI.Sprite(tex);
-                            s.position.set(wx, wy); s.zIndex = wy + 16;
+                            s.position.set(wx, wy);
+                            s.zIndex = wy + (p.l === 'w' ? 0 : 5);
                             this.layers.WORLD_OBJECTS.addChild(s);
                             worldObjects.push(s);
                         }
                     });
                 }
 
-                if (data.deco) {
+                if (data.deco && !data.structure) {
                     const tex = this.envTextures[data.deco];
                     if (tex) {
                         const obj = new PIXI.Sprite(tex);
+                        const wx = gx * 32 + 16;
+                        const wy = gy * 32 + 32;
                         obj.anchor.set(0.5, 0.95);
-                        obj.position.set(gx * 32 + 16, gy * 32 + 32);
-                        obj.zIndex = obj.y;
+                        obj.position.set(wx, wy);
+                        obj.zIndex = wy;
                         this.layers.WORLD_OBJECTS.addChild(obj);
                         worldObjects.push(obj);
                     }

@@ -10,51 +10,80 @@ export class ObjectTemplates {
             textures[name] = app.renderer.generateTexture(g);
         };
 
-        // Дерево с тенями и "освещением"
+        // --- ПРИРОДА (Статика) ---
         create('forest_tree_1', g => {
-            // Тень под деревом
-            g.beginFill(0x000000, 0.3).drawEllipse(16, 28, 12, 4).endFill();
-            // Ствол
-            g.beginFill(0x2d1b0d).drawRect(12, 18, 8, 14);
-            // Крона (слои с градиентом)
-            g.beginFill(0x1a2e1a).drawPolygon([0,22, 16,0, 32,22]);
-            g.beginFill(0x2d5a27).drawPolygon([4,14, 16,2, 28,14]);
-            g.beginFill(0x3e7b37, 0.5).drawCircle(16, 8, 4); // Блик
+            g.beginFill(0x000000, 0.2).drawEllipse(16, 28, 12, 4).endFill();
+            g.beginFill(0x2d1b0d).drawRect(12, 16, 8, 14);
+            g.beginFill(0x1a2e1a).drawPolygon([0,20, 16,0, 32,20]);
+            g.beginFill(0x2d5a27).drawPolygon([4,12, 16,0, 28,12]);
         });
 
-        create('forest_tree_2', g => {
-            g.beginFill(0x000000, 0.3).drawEllipse(16, 28, 10, 4).endFill();
-            g.beginFill(0x3d2b1f).drawRect(13, 20, 6, 12);
-            g.beginFill(0x0d1a0d).drawCircle(16, 12, 14);
-            g.beginFill(0x1a2e1a).drawCircle(12, 8, 8);
-        });
-
-        // Камень с фаской
         create('mountains_rock_1', g => {
-            g.beginFill(0x000000, 0.2).drawEllipse(16, 28, 14, 4).endFill();
-            g.beginFill(0x2d3436).drawPolygon([2,28, 30,28, 26,10, 8,6, 0,14]);
-            g.beginFill(0x636e72).drawPolygon([6,26, 26,26, 24,14, 10,10]);
+            g.beginFill(0x2d3436).drawPolygon([4,30, 28,30, 24,10, 8,14]);
+            g.beginFill(0x636e72).drawPolygon([8,28, 24,28, 20,16, 12,18]);
         });
 
-        // Светящийся кристалл
-        create('mountains_crystal', g => {
-            g.beginFill(0x00d2ff, 0.2).drawCircle(16, 16, 18).endFill();
-            g.beginFill(0x00d2ff).drawPolygon([16,2, 26,16, 16,30, 6,16]);
-            g.beginFill(0xffffff, 0.7).drawRect(14, 10, 4, 4);
+        // --- АНИМИРОВАННЫЕ ОБЪЕКТЫ (Массивы кадров) ---
+        
+        // Магический гриб (Пульсация)
+        const mushroomFrames = [];
+        for(let i=0; i<3; i++) {
+            g.clear();
+            const glow = 0.2 + (i * 0.15);
+            g.beginFill(0x00f2ff, glow).drawCircle(16, 20, 10 + i*2).endFill();
+            g.beginFill(0xdcdde1).drawRect(14, 24, 4, 6);
+            g.beginFill(0x00d2ff).drawEllipse(16, 20, 10, 6);
+            mushroomFrames.push(app.renderer.generateTexture(g));
+        }
+        textures.forest_magic_shroom = mushroomFrames;
+
+        // Пузыри в болоте
+        const swampBubbleFrames = [];
+        for(let i=0; i<4; i++) {
+            g.clear();
+            g.beginFill(0x16a085, 0.6);
+            if (i < 3) g.drawCircle(16, 28 - (i*4), 2 + i);
+            else g.drawCircle(16, 10, 1).drawCircle(12, 12, 1).drawCircle(20, 8, 1);
+            swampBubbleFrames.push(app.renderer.generateTexture(g));
+        }
+        textures.swamp_bubbles = swampBubbleFrames;
+
+        // Костер (Анимация пламени)
+        const fireFrames = [];
+        for(let i=0; i<4; i++) {
+            g.clear();
+            g.beginFill(0x3d2b1f).drawRect(8, 28, 16, 4);
+            g.beginFill(0xe67e22).drawPolygon([10,28, 16, 10 + (i%2)*4, 22,28]);
+            g.beginFill(0xf1c40f).drawPolygon([12,28, 16, 18 + (i%2)*2, 20,28]);
+            fireFrames.push(app.renderer.generateTexture(g));
+        }
+        textures.world_campfire = fireFrames;
+
+        // Парящий кристалл
+        const crystalFrames = [];
+        for(let i=0; i<6; i++) {
+            g.clear();
+            const yOff = Math.sin(i * (Math.PI/3)) * 4;
+            g.beginFill(0x000000, 0.1).drawCircle(16, 30, 8).endFill();
+            g.beginFill(0x9b59b6).drawPolygon([16, 4+yOff, 24, 16+yOff, 16, 28+yOff, 8, 16+yOff]);
+            g.beginFill(0xd386f5, 0.5).drawRect(14, 10+yOff, 4, 4);
+            crystalFrames.push(app.renderer.generateTexture(g));
+        }
+        textures.mountains_crystal = crystalFrames;
+
+        // --- ОБЫЧНЫЙ ДЕКОР ---
+        create('village_barrel', g => {
+            g.beginFill(0x5d4037).drawRect(8, 14, 16, 16);
+            g.beginFill(0x3e2723).drawRect(8, 18, 16, 2).drawRect(8, 26, 16, 2);
         });
 
-        // Руины (стены)
-        create('wasteland_ruin', g => {
-            g.beginFill(0x2d3436).drawRect(4, 4, 24, 28);
-            g.beginFill(0x1a1a1a).drawRect(10, 16, 12, 16); // Проем
-            g.beginFill(0x636e72).drawRect(4, 4, 24, 4); // Окантовка
+        create('village_crate', g => {
+            g.beginFill(0x8d6e63).drawRect(8, 14, 16, 16);
+            g.lineStyle(1, 0x5d4037).moveTo(8,14).lineTo(24,30).moveTo(24,14).lineTo(8,30);
         });
 
-        // Цветы
-        create('forest_flower', g => {
-            g.beginFill(0x2ecc71).drawRect(15, 24, 2, 8);
-            g.beginFill(0xc0392b).drawCircle(16, 20, 4);
-            g.beginFill(0xf1c40f).drawCircle(16, 20, 1.5);
+        create('village_fence_h', g => {
+            g.beginFill(0x3e2723).drawRect(0, 20, 32, 4).drawRect(4, 16, 4, 12).drawRect(24, 16, 4, 12);
         });
 
         return textures;

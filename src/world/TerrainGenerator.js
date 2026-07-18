@@ -35,14 +35,34 @@ export class TerrainGenerator {
         const dVal = (this.detailNoise.perlin(gx * dScale, gy * dScale) + 1) / 2;
         
         let structureType = null;
+        let decoType = null;
+        let isAnimated = false;
+
+        // Декор в деревне
         if (biome.id === 'village' && !isRoad) {
-            const seed = (gx * 7 + gy * 13) % 100;
+            const seed = Math.abs(gx * 7 + gy * 13) % 100;
             if (gx % 12 === 0 && gy % 12 === 0) {
-                if (seed < 20) structureType = 'hut';
-                else if (seed < 40) structureType = 'blacksmith';
-                else if (seed < 60) structureType = 'tavern';
-                else if (seed < 80) structureType = 'library';
-                else structureType = 'storehouse';
+                structureType = seed < 50 ? 'hut' : 'blacksmith';
+            } else if (dVal > 0.85) {
+                decoType = seed > 50 ? 'village_barrel' : 'village_crate';
+            }
+        }
+
+        // Анимированный декор в мире
+        if (biome.id !== 'village' && !isRoad && dVal > 0.92) {
+            const worldSeed = Math.abs(gx * 3 + gy * 17) % 100;
+            if (biome.id === 'forest' && worldSeed > 80) {
+                decoType = 'forest_magic_shroom';
+                isAnimated = true;
+            } else if (biome.id === 'swamp' && worldSeed > 70) {
+                decoType = 'swamp_bubbles';
+                isAnimated = true;
+            } else if (biome.id === 'mountains' && worldSeed > 85) {
+                decoType = 'mountains_crystal';
+                isAnimated = true;
+            } else if (worldSeed < 5) {
+                decoType = 'world_campfire';
+                isAnimated = true;
             }
         }
 
@@ -50,7 +70,9 @@ export class TerrainGenerator {
             biome,
             isRoad,
             structureType,
-            objectType: (!isRoad && dVal > 0.88) ? biome.id : null
+            decoType,
+            isAnimated,
+            objectType: (!isRoad && !structureType && !decoType && dVal > 0.85) ? biome.id : null
         };
     }
 }

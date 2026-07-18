@@ -8,9 +8,9 @@ export const CONFIG = {
     LAYERS: {
         FLOOR: 0,
         SHADOWS: 1,
-        WORLD_OBJECTS: 2, // Здесь игрок и деревья (Y-Sorted)
+        WORLD_OBJECTS: 2, // Здесь игрок, деревья, дома и декор (Y-Sorted)
         ROOFS: 3,
-        ATMOSPHERE: 4,
+        VFX: 4,
         UI_OVERLAY: 5
     }
 };

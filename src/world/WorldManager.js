@@ -18,6 +18,7 @@ export class WorldManager {
         this.initLayers();
         this.generator = new TerrainGenerator(Date.now());
         this.animTimer = 0;
+        this.player = null;
         this.npcs = [];
     }
 
@@ -47,7 +48,7 @@ export class WorldManager {
         this.player.anchor.set(0.5, 0.95);
         this.layers.WORLD_OBJECTS.addChild(this.player);
         
-        this.moveSpeed = 240 + (charData.stats.dex * 8);
+        this.moveSpeed = 240 + (charData.stats.dex * 10);
         this.manageChunks();
     }
 
@@ -72,8 +73,7 @@ export class WorldManager {
         this.player.x = Math.round(this.cameraPos.x);
         this.player.y = Math.round(this.cameraPos.y);
         this.player.zIndex = this.player.y;
-        this.playerShadow.x = this.player.x;
-        this.playerShadow.y = this.player.y + 2;
+        this.playerShadow.position.set(this.player.x, this.player.y + 2);
 
         this.manageChunks();
         this.renderWorld();
@@ -83,14 +83,17 @@ export class WorldManager {
     updateAI(dt) {
         this.npcs.forEach(npc => {
             const d = npc.userData;
-            d.timer -= dt;
-            if (d.timer <= 0) {
-                d.state = Math.random() > 0.6 ? 'walking' : 'idle';
-                d.timer = 3 + Math.random() * 5;
-                d.vx = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
-                d.vy = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
-            }
-            if (d.state === 'walking') {
+            if (d.type === 'bird') {
+                npc.x += 100 * dt; // Птицы летят в одну сторону
+                npc.y += Math.sin(this.animTimer * 5) * 2;
+            } else {
+                d.timer -= dt;
+                if (d.timer <= 0) {
+                    d.state = Math.random() > 0.7 ? 'walking' : 'idle';
+                    d.timer = 2 + Math.random() * 5;
+                    d.vx = d.state === 'walking' ? (Math.random() - 0.5) * 40 : 0;
+                    d.vy = d.state === 'walking' ? (Math.random() - 0.5) * 40 : 0;
+                }
                 npc.x += d.vx * dt; npc.y += d.vy * dt;
                 if (d.vx !== 0) npc.scale.x = d.vx > 0 ? 1 : -1;
             }
@@ -101,7 +104,7 @@ export class WorldManager {
     createChunk(cx, cy) {
         const floor = new PIXI.Container();
         const roofs = new PIXI.Container();
-        const worldObjects = [];
+        const worldObjs = [];
         const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
         floor.position.set(cx * chunkPx, cy * chunkPx);
         roofs.position.set(cx * chunkPx, cy * chunkPx);
@@ -126,36 +129,35 @@ export class WorldManager {
                             s.userData = { gx: gx + p.x, gy: gy + p.y };
                             roofs.addChild(s);
                         } else {
-                            const s = new PIXI.Sprite(this.buildTextures[p.t]);
+                            const s = new PIXI.Sprite(this.envTextures[p.t] || this.buildTextures[p.t]);
                             s.position.set(wx, wy); s.zIndex = wy + 16;
                             this.layers.WORLD_OBJECTS.addChild(s);
-                            worldObjects.push(s);
+                            worldObjs.push(s);
                         }
                     });
                 }
 
                 if (data.deco) {
                     const obj = new PIXI.Sprite(this.envTextures[data.deco]);
-                    const wx = gx * 32 + 16;
-                    const wy = gy * 32 + 32;
                     obj.anchor.set(0.5, 0.95);
-                    obj.position.set(wx, wy); obj.zIndex = wy;
+                    obj.position.set(gx * 32 + 16, gy * 32 + 32);
+                    obj.zIndex = obj.y;
                     this.layers.WORLD_OBJECTS.addChild(obj);
-                    worldObjects.push(obj);
+                    worldObjs.push(obj);
                 }
 
                 if (data.npc) {
-                    const npc = NPCFactory.createNPC(this.app, data.npc, data.npc === 'knight' ? '#bdc3c7' : '#ffffff');
+                    const npc = NPCFactory.createNPC(this.app, data.npc, '#ffffff');
                     npc.position.set(gx * 32 + 16, gy * 32 + 16);
                     this.layers.WORLD_OBJECTS.addChild(npc);
                     this.npcs.push(npc);
-                    worldObjects.push(npc);
+                    worldObjs.push(npc);
                 }
             }
         }
         this.layers.FLOOR.addChild(floor);
-        this.layers.ROOFS.addChild(roofs);
-        this.loadedChunks.set(`${cx},${cy}`, { floor, roofs, worldObjects });
+        this.layers.STRUCTURE_ROOF.addChild(roofs);
+        this.loadedChunks.set(`${cx},${cy}`, { floor, roofs, worldObjs });
     }
 
     manageChunks() {
@@ -174,7 +176,7 @@ export class WorldManager {
                 if (Math.abs(cx - curX) > 2 || Math.abs(cy - curY) > 2) {
                     chunk.floor.destroy({ children: true });
                     chunk.roofs.destroy({ children: true });
-                    chunk.worldObjects.forEach(obj => {
+                    chunk.worldObjs.forEach(obj => {
                         const idx = this.npcs.indexOf(obj);
                         if(idx > -1) this.npcs.splice(idx, 1);
                         obj.destroy();
@@ -188,9 +190,9 @@ export class WorldManager {
     handleTransparency() {
         const px = Math.floor(this.cameraPos.x / 32);
         const py = Math.floor(this.cameraPos.y / 32);
-        this.layers.ROOFS.children.forEach(c => c.children.forEach(r => {
-            const dist = Math.sqrt(Math.pow(r.userData.gx - px, 2) + Math.pow(r.userData.gy - py, 2));
-            r.alpha = dist < 3.5 ? 0.3 : 1.0;
+        this.layers.STRUCTURE_ROOF.children.forEach(c => c.children.forEach(r => {
+            const dx = r.userData.gx - px, dy = r.userData.gy - py;
+            r.alpha = (dx*dx + dy*dy < 12) ? 0.3 : 1.0;
         }));
     }
 
@@ -200,6 +202,6 @@ export class WorldManager {
         this.layers.FLOOR.position.set(ox, oy);
         this.layers.SHADOWS.position.set(ox, oy);
         this.layers.WORLD_OBJECTS.position.set(ox, oy);
-        this.layers.ROOFS.position.set(ox, oy);
+        this.layers.STRUCTURE_ROOF.position.set(ox, oy);
     }
 }

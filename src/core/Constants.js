@@ -3,24 +3,27 @@ export const CONFIG = {
     TILE_SIZE: 32,
     CHUNK_SIZE: 16,
     WORLD_SIZE: 1000000,
-    SEA_LEVEL: 0.25,
+    VILLAGE_RADIUS: 150,
     LAYERS: {
-        FLOOR: 0,
-        SHADOWS: 1,
-        WORLD_OBJECTS: 2, 
-        ROOFS: 3,
-        UI_OVERLAY: 4
+        FLOOR: 0,           // Трава, песок, тропы
+        FLOOR_DECO: 1,      // Мелкие камушки, травинки
+        SHADOWS: 2,         // Тени от всех объектов
+        WORLD_OBJECTS: 3,   // Игрок, NPC, Деревья, Стены (Y-Sorted)
+        STRUCTURE_ROOF: 4,  // Крыши
+        UI_OVERLAY: 5       // Интерфейс
     }
 };
 
 export const BIOMES = {
-    OCEAN: { id: 'ocean', color: 0x0a3d62, accent: 0x0c4b73, name: 'Океан' },
-    BEACH: { id: 'beach', color: 0xeccc68, accent: 0xff7f50, name: 'Пляж' },
-    FOREST: { id: 'forest', color: 0x2f361c, accent: 0x1e270e, name: 'Лес' },
-    PLAINS: { id: 'plains', color: 0x556b2f, accent: 0x6b8e23, name: 'Равнины' },
-    FARMLAND: { id: 'farmland', color: 0x8b4513, accent: 0x5d4037, name: 'Фермерские угодья' },
-    VILLAGE: { id: 'village', color: 0x4a4e52, accent: 0x2f3542, name: 'Поселение' },
-    ROAD: { id: 'road', color: 0x3d3126, accent: 0x2d1b0d, name: 'Тракт' }
+    DEEP_OCEAN: { id: 'deep_ocean', color: 0x0a1931, accent: 0x1e3799, name: 'Бездна' },
+    OCEAN: { id: 'ocean', color: 0x1e3799, accent: 0x4834d4, name: 'Океан' },
+    BEACH: { id: 'beach', color: 0xf7d794, accent: 0xf3a683, name: 'Пески' },
+    FOREST: { id: 'forest', color: 0x1e3a1a, accent: 0x27ae60, name: 'Вековой Лес' },
+    TAIGA: { id: 'taiga', color: 0x2d3436, accent: 0x636e72, name: 'Тайга' },
+    PLAINS: { id: 'plains', color: 0x588157, accent: 0x3a5a40, name: 'Равнины' },
+    FARMLAND: { id: 'farmland', color: 0x3d2b1f, accent: 0x5d4037, name: 'Пашни' },
+    VILLAGE: { id: 'village', color: 0x4a4e52, accent: 0x2f3542, name: 'Город' },
+    ROAD: { id: 'road', color: 0x3d3126, accent: 0x574b3a, name: 'Тракт' }
 };
 
 export const RACES = {

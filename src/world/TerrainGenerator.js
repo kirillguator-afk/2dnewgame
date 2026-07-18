@@ -27,15 +27,22 @@ export class TerrainGenerator {
         const dVal = (this.detailNoise.perlin(gx * dScale, gy * dScale) + 1) / 2;
         
         let objectType = null;
-        // Шанс спавна объекта в зависимости от биома
-        if (!isRoad && dVal > 0.88) {
+        let objectVariation = 1;
+
+        if (!isRoad && dVal > 0.85) {
             objectType = biome.id; 
+            // Определяем вариацию (1-3) на основе дробной части шума
+            const vSeed = (dVal * 100) % 1;
+            if (vSeed < 0.4) objectVariation = 1;
+            else if (vSeed < 0.8) objectVariation = 2;
+            else objectVariation = 3;
         }
 
         return {
             biome,
             isRoad,
             objectType,
+            objectVariation,
             variation: Math.floor(dVal * 10)
         };
     }

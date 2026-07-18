@@ -1,87 +1,90 @@
 
 import { Noise } from '../utils/Noise.js';
-import { BIOMES, CONFIG } from '../core/Constants.js';
+import { BIOMES } from '../core/Constants.js';
 
 export class TerrainGenerator {
     constructor(seed) {
         this.seed = seed;
         this.noises = {
             height: new Noise(seed),
-            moisture: new Noise(seed + 101),
-            heat: new Noise(seed + 202),
-            roads: new Noise(seed + 303),
-            distortion: new Noise(seed + 404),
-            objects: new Noise(seed + 505)
+            moisture: new Noise(seed + 1),
+            roads: new Noise(seed + 2),
+            distort: new Noise(seed + 3),
+            objects: new Noise(seed + 4)
         };
         this.centerX = 500000;
         this.centerY = 500000;
     }
 
-    getFractalNoise(noise, x, y, octaves, persistence, lacunarity, scale) {
-        let total = 0, frequency = scale, amplitude = 1, maxValue = 0;
-        for (let i = 0; i < octaves; i++) {
-            total += noise.perlin(x * frequency, y * frequency) * amplitude;
-            maxValue += amplitude;
-            amplitude *= persistence;
-            frequency *= lacunarity;
-        }
-        return (total / maxValue + 1) / 2;
-    }
-
     getTileData(gx, gy) {
-        const distortX = this.noises.distortion.perlin(gx * 0.05, gy * 0.05) * 8;
-        const distortY = this.noises.distortion.perlin(gy * 0.05, gx * 0.05) * 8;
+        const dX = this.noises.distort.perlin(gx * 0.05, gy * 0.05) * 6;
+        const dY = this.noises.distort.perlin(gy * 0.05, gx * 0.05) * 6;
 
-        const dx = (gx - this.centerX) / 3000, dy = (gy - this.centerY) / 3000;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        
-        let height = this.getFractalNoise(this.noises.height, gx + distortX, gy + distortY, 5, 0.5, 2.0, 0.004);
-        height *= Math.max(0, 1.1 - dist * dist);
+        // 1. География
+        const dist = Math.sqrt(Math.pow((gx-this.centerX)/2000, 2) + Math.pow((gy-this.centerY)/2000, 2));
+        let h = (this.noises.height.perlin((gx+dX)*0.005, (gy+dY)*0.005) + 1) / 2;
+        h *= Math.max(0, 1.2 - dist);
 
-        // Дороги с мягкими краями
-        const roadNoiseVal = this.noises.roads.perlin((gx + distortX) * 0.02, (gy + distortY) * 0.02);
-        const isRoad = Math.abs(roadNoiseVal) < 0.03 && height > 0.28;
+        // 2. Дороги
+        const rVal = Math.abs(this.noises.roads.perlin((gx+dX)*0.02, (gy+dY)*0.02));
+        const isRoad = rVal < 0.035 && h > 0.28;
 
+        // 3. Биомы
         let biome = BIOMES.OCEAN;
-        if (height > 0.28) {
-            const heat = this.getFractalNoise(this.noises.heat, gx, gy, 3, 0.5, 2.0, 0.003);
-            const moisture = this.getFractalNoise(this.noises.moisture, gx, gy, 3, 0.5, 2.0, 0.006);
-            if (height < 0.31) biome = BIOMES.BEACH;
-            else if (height > 0.72) biome = BIOMES.MOUNTAINS;
+        if (h > 0.28) {
+            const m = (this.noises.moisture.perlin(gx*0.01, gy*0.01) + 1) / 2;
+            if (h < 0.31) biome = BIOMES.BEACH;
+            else if (h > 0.75) biome = BIOMES.MOUNTAINS;
             else {
-                if (heat < 0.45) biome = BIOMES.SNOW;
-                else if (moisture > 0.6) biome = BIOMES.FOREST;
-                else biome = BIOMES.WASTELAND;
+                biome = m > 0.5 ? BIOMES.FOREST : BIOMES.PLAINS;
             }
         }
 
+        // Поселение
         const distToCenter = Math.sqrt(Math.pow(gx-this.centerX, 2) + Math.pow(gy-this.centerY, 2));
-        if (distToCenter < 120) biome = BIOMES.VILLAGE;
+        if (distToCenter < 150) {
+            if (!isRoad) {
+                // Зонирование внутри поселения
+                const farmNoise = (this.noises.objects.perlin(gx*0.05, gy*0.05) + 1) / 2;
+                if (farmNoise > 0.7) biome = BIOMES.FARMLAND;
+                else biome = BIOMES.VILLAGE;
+            } else {
+                biome = BIOMES.ROAD;
+            }
+        }
 
-        // --- НОВАЯ ЛОГИКА ЯКОРЕЙ ---
-        let structureType = null;
-        let decoType = null;
-        let isAnimated = false;
-        const objVal = (this.noises.objects.perlin(gx * 0.4, gy * 0.4) + 1) / 2;
+        // 4. Логика размещения (Мастер-Тайлы)
+        let structure = null, deco = null, npc = null;
+        const objNoise = (this.noises.objects.perlin(gx*0.4, gy*0.4) + 1) / 2;
 
         if (biome.id === 'village' && !isRoad) {
-            // Собор в самом центре
-            if (gx === this.centerX - 4 && gy === this.centerY - 4) structureType = 'cathedral';
-            // Ратуши по сетке 48
-            else if (gx % 48 === 0 && gy % 48 === 0) structureType = 'town_hall';
-            // Таверны по сетке 24
-            else if (gx % 24 === 0 && gy % 24 === 0 && gx % 48 !== 0) structureType = 'tavern';
-            // Декор только вдали от фундаментов (упрощенная проверка на "свободное место")
-            else if (objVal > 0.75 && gx % 8 !== 0 && gy % 8 !== 0) {
-                decoType = objVal > 0.9 ? 'village_lamp_post' : 'village_barrel_full';
+            // Здания только вдоль дорог
+            const roadNear = this.checkRoadProximity(gx, gy);
+            if (roadNear && gx % 16 === 0 && gy % 16 === 0) {
+                structure = (gx + gy) % 32 === 0 ? 'town_hall' : 'hut';
+            } else if (objNoise > 0.8) {
+                deco = 'village_haystack';
             }
-        } else if (height > 0.28 && !isRoad) {
-            if (objVal > 0.88) {
-                if (biome.id === 'forest') decoType = `tree_forest_${(Math.abs(gx)%10)+1}`;
-                else if (biome.id === 'mountains' && objVal > 0.95) { decoType = 'mountains_crystal'; isAnimated = true; }
-            }
+        } else if (biome.id === 'farmland') {
+            if (objNoise > 0.6) deco = 'crop_wheat';
+            if (gx % 10 === 0 && gy % 10 === 0) npc = (gx % 20 === 0) ? 'cow' : 'sheep';
+        } else if (biome.id === 'forest' && !isRoad) {
+            if (objNoise > 0.85) deco = 'nature_tree_pro';
+        } else if (biome.id === 'plains' && !isRoad) {
+            if (objNoise > 0.95) deco = 'nature_bush';
+            if (objNoise < 0.05) npc = 'sheep';
         }
 
-        return { biome, structureType, decoType, isAnimated, isRoad };
+        return { biome, isRoad, structure, deco, npc };
+    }
+
+    checkRoadProximity(gx, gy) {
+        for(let x=-2; x<=2; x++) {
+            for(let y=-2; y<=2; y++) {
+                const r = Math.abs(this.noises.roads.perlin((gx+x)*0.02, (gy+y)*0.02));
+                if (r < 0.035) return true;
+            }
+        }
+        return false;
     }
 }

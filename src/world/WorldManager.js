@@ -18,7 +18,6 @@ export class WorldManager {
         this.initLayers();
         this.generator = new TerrainGenerator(Date.now());
         this.animTimer = 0;
-        this.player = null;
         this.npcs = [];
     }
 
@@ -43,10 +42,12 @@ export class WorldManager {
         this.playerShadow = new PIXI.Sprite(assets.shadow);
         this.playerShadow.anchor.set(0.5);
         this.layers.SHADOWS.addChild(this.playerShadow);
+        
         this.player = new PIXI.Sprite(this.playerFrames[0]);
         this.player.anchor.set(0.5, 0.95);
         this.layers.WORLD_OBJECTS.addChild(this.player);
-        this.moveSpeed = 220 + (charData.stats.dex * 10);
+        
+        this.moveSpeed = 240 + (charData.stats.dex * 8);
         this.manageChunks();
     }
 
@@ -64,15 +65,13 @@ export class WorldManager {
             this.player.y = Math.floor(window.innerHeight / 2 + Math.sin(this.animTimer * 15) * 2);
         } else {
             this.player.texture = this.playerFrames[0];
-            this.player.scale.y = 1.0 + Math.sin(this.animTimer * 2) * 0.02;
             this.player.y = Math.floor(window.innerHeight / 2);
         }
 
-        this.updateNPCs(dt);
+        this.updateAI(dt);
         this.player.x = Math.round(this.cameraPos.x);
         this.player.y = Math.round(this.cameraPos.y);
         this.player.zIndex = this.player.y;
-        
         this.playerShadow.x = this.player.x;
         this.playerShadow.y = this.player.y + 2;
 
@@ -81,19 +80,19 @@ export class WorldManager {
         this.handleTransparency();
     }
 
-    updateNPCs(dt) {
+    updateAI(dt) {
         this.npcs.forEach(npc => {
             const d = npc.userData;
             d.timer -= dt;
-            if(d.timer <= 0) {
-                d.state = Math.random() > 0.7 ? 'walking' : 'idle';
-                d.timer = 3 + Math.random()*5;
-                d.vx = d.state === 'walking' ? (Math.random()-0.5)*30 : 0;
-                d.vy = d.state === 'walking' ? (Math.random()-0.5)*30 : 0;
+            if (d.timer <= 0) {
+                d.state = Math.random() > 0.6 ? 'walking' : 'idle';
+                d.timer = 3 + Math.random() * 5;
+                d.vx = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
+                d.vy = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
             }
-            if(d.state === 'walking') {
+            if (d.state === 'walking') {
                 npc.x += d.vx * dt; npc.y += d.vy * dt;
-                if(d.vx !== 0) npc.scale.x = d.vx > 0 ? 1 : -1;
+                if (d.vx !== 0) npc.scale.x = d.vx > 0 ? 1 : -1;
             }
             npc.zIndex = Math.floor(npc.y);
         });
@@ -113,55 +112,44 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                const tileTex = this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`];
-                const tile = new PIXI.Sprite(tileTex);
+                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.biome.id}`]);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
-                // РАЗМЕЩЕНИЕ СТРУКТУР (ТОЛЬКО ЧЕРЕЗ ЯКОРЬ)
-                if (data.structureType) {
-                    const schema = BuildingTemplates.getHouseSchema(data.structureType);
-                    schema.forEach(p => {
+                if (data.structure) {
+                    BuildingTemplates.getHouseSchema(data.structure).forEach(p => {
                         const wx = (gx + p.x) * 32;
                         const wy = (gy + p.y) * 32;
-                        const tex = p.anim ? this.envTextures.animated_fire : (this.envTextures[p.t] || this.buildTextures[p.t]);
-                        
                         if (p.l === 'r') {
-                            const s = new PIXI.Sprite(tex);
-                            // Крыши рисуются в локальных координатах чанка для системы прозрачности
-                            // Но нам нужно вычислить их мировые координаты для проверки
-                            s.position.set((gx - cx * CONFIG.CHUNK_SIZE + p.x) * 32, (gy - cy * CONFIG.CHUNK_SIZE + p.y) * 32);
+                            const s = new PIXI.Sprite(this.buildTextures[p.t]);
+                            s.position.set((tx + p.x) * 32, (ty + p.y) * 32);
                             s.userData = { gx: gx + p.x, gy: gy + p.y };
                             roofs.addChild(s);
                         } else {
-                            const s = p.anim ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
-                            s.position.set(wx, wy);
-                            s.zIndex = wy + 16;
-                            if(p.anim) { s.animationSpeed=0.1; s.play(); }
+                            const s = new PIXI.Sprite(this.buildTextures[p.t]);
+                            s.position.set(wx, wy); s.zIndex = wy + 16;
                             this.layers.WORLD_OBJECTS.addChild(s);
                             worldObjects.push(s);
                         }
                     });
-                    
-                    // Спавн Рыцаря-Стражника у входа в большие здания
-                    const guard = NPCFactory.createNPC(this.app, 'knight', '#bdc3c7');
-                    guard.position.set(gx * 32 + 32, gy * 32 + 64);
-                    this.layers.WORLD_OBJECTS.addChild(guard);
-                    this.npcs.push(guard);
-                    worldObjects.push(guard);
                 }
 
-                if (data.decoType && !data.structureType) {
-                    const texData = this.envTextures[data.decoType];
-                    const obj = data.isAnimated ? new PIXI.AnimatedSprite(texData) : new PIXI.Sprite(texData);
-                    const wx = (gx * 32) + 16;
-                    const wy = (gy * 32) + 32;
+                if (data.deco) {
+                    const obj = new PIXI.Sprite(this.envTextures[data.deco]);
+                    const wx = gx * 32 + 16;
+                    const wy = gy * 32 + 32;
                     obj.anchor.set(0.5, 0.95);
-                    obj.position.set(wx, wy);
-                    obj.zIndex = wy;
-                    if (data.isAnimated) { obj.animationSpeed = 0.1; obj.play(); }
+                    obj.position.set(wx, wy); obj.zIndex = wy;
                     this.layers.WORLD_OBJECTS.addChild(obj);
                     worldObjects.push(obj);
+                }
+
+                if (data.npc) {
+                    const npc = NPCFactory.createNPC(this.app, data.npc, data.npc === 'knight' ? '#bdc3c7' : '#ffffff');
+                    npc.position.set(gx * 32 + 16, gy * 32 + 16);
+                    this.layers.WORLD_OBJECTS.addChild(npc);
+                    this.npcs.push(npc);
+                    worldObjects.push(npc);
                 }
             }
         }
@@ -200,12 +188,10 @@ export class WorldManager {
     handleTransparency() {
         const px = Math.floor(this.cameraPos.x / 32);
         const py = Math.floor(this.cameraPos.y / 32);
-        this.layers.ROOFS.children.forEach(chunkCont => {
-            chunkCont.children.forEach(r => {
-                const dx = r.userData.gx - px, dy = r.userData.gy - py;
-                r.alpha = (dx*dx + dy*dy < 12) ? 0.25 : 1.0;
-            });
-        });
+        this.layers.ROOFS.children.forEach(c => c.children.forEach(r => {
+            const dist = Math.sqrt(Math.pow(r.userData.gx - px, 2) + Math.pow(r.userData.gy - py, 2));
+            r.alpha = dist < 3.5 ? 0.3 : 1.0;
+        }));
     }
 
     renderWorld() {

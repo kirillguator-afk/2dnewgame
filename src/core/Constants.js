@@ -10,8 +10,45 @@ export const CONFIG = {
         FLOOR: 1,
         DECOR: 2,
         MACHINES: 3,
-        PLAYER: 4,
-        UI: 5
+        LIGHTING: 4, // Слой для света
+        PLAYER: 5,
+        VFX: 6,      // Слой частиц
+        UI: 7
+    }
+};
+
+export const BIOMES = {
+    NEON_RUINS: { 
+        id: 'ruins', 
+        color: 0x1a1a1c, 
+        accent: 0x00f2ff, 
+        name: 'Neon Ruins', 
+        ambient: 0x050505,
+        vfx: 'sparks'
+    },
+    TOXIC_SWAMP: { 
+        id: 'swamp', 
+        color: 0x0d1a0d, 
+        accent: 0x33ff33, 
+        name: 'Toxic Swamp', 
+        ambient: 0x0a140a,
+        vfx: 'bubbles'
+    },
+    MAGNETIC_DESERT: { 
+        id: 'desert', 
+        color: 0x1a0d1a, 
+        accent: 0xff00ff, 
+        name: 'Magnetic Desert', 
+        ambient: 0x140514,
+        vfx: 'dust'
+    },
+    BASALT_PEAKS: { 
+        id: 'peaks', 
+        color: 0x0a0a0a, 
+        accent: 0x777777, 
+        name: 'Basalt Peaks', 
+        ambient: 0x000000,
+        vfx: 'smoke'
     }
 };
 
@@ -19,13 +56,6 @@ export const ENTITY_TYPES = {
     SHAFT: 'shaft',
     GEAR: 'gear',
     MOTOR: 'motor'
-};
-
-export const BIOMES = {
-    NEON_RUINS: { id: 'ruins', color: 0x2a2a2a, accent: 0x00f2ff, name: 'Neon Ruins', density: 0.4 },
-    TOXIC_SWAMP: { id: 'swamp', color: 0x1a2e1a, accent: 0x33ff33, name: 'Toxic Swamp', density: 0.6 },
-    MAGNETIC_DESERT: { id: 'desert', color: 0x2e1a2e, accent: 0xff00ff, name: 'Magnetic Desert', density: 0.2 },
-    BASALT_PEAKS: { id: 'peaks', color: 0x111111, accent: 0x555555, name: 'Basalt Peaks', density: 0.8 }
 };
 
 export const RACES = {

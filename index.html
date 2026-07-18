@@ -4,110 +4,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project: NEON-GEAR | Sandbox MMORPG</title>
+    <title>Project: NEON-GEAR | Syndicate-Prime</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #050505; font-family: 'JetBrains Mono', monospace; }
-        canvas { display: block; }
-        .neon-border { border: 1px solid #00f2ff; box-shadow: 0 0 10px rgba(0, 242, 255, 0.5); }
-        .neon-text { color: #00f2ff; text-shadow: 0 0 5px #00f2ff; }
-        .glitch-text { text-shadow: 2px 0 #ff00ff, -2px 0 #00f2ff; }
-        #ui-layer { pointer-events: none; }
-        #ui-layer * { pointer-events: auto; }
-        
-        /* Стили для скроллбара в стиле киберпанк */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #050505; }
-        ::-webkit-scrollbar-thumb { background: #00f2ff; }
-
-        input, select {
-            background: rgba(0, 242, 255, 0.1) !important;
-            border: 1px solid rgba(0, 242, 255, 0.3) !important;
-            color: #00f2ff !important;
+        body { margin: 0; overflow: hidden; background: #020202; font-family: 'JetBrains Mono', monospace; }
+        .neon-panel { 
+            background: rgba(0, 20, 30, 0.85);
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.1), 0 0 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
         }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .stat-bar {
+            height: 4px;
+            background: rgba(0, 242, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-bar-fill {
+            position: absolute;
+            height: 100%;
+            background: #00f2ff;
+            box-shadow: 0 0 10px #00f2ff;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
 
-    <!-- Character Creator Overlay -->
-    <div id="creator-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
-        <div class="neon-border bg-black/80 w-full max-w-4xl max-h-[90vh] overflow-y-auto p-8 flex flex-col md:flex-row gap-8">
-            <!-- Left: Form -->
-            <div class="flex-1 space-y-6">
-                <div>
-                    <h2 class="text-3xl font-bold font-['Orbitron'] text-cyan-400 mb-2">IDENTIFICATION</h2>
-                    <p class="text-xs text-cyan-700 uppercase">Establish your digital presence in Syndicate-Prime</p>
-                </div>
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs text-cyan-500 mb-1 uppercase">Neural Link Name</label>
-                        <input id="char-name" type="text" maxlength="16" placeholder="Guest_User_77" 
-                               class="w-full p-3 outline-none focus:border-cyan-400 transition-all">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-cyan-500 mb-1 uppercase">Sub-Species Model</label>
-                        <select id="char-race" class="w-full p-3 outline-none">
-                            <option value="HUMAN">Human (Biological)</option>
-                            <option value="ANDROID">Android (Synthesized)</option>
-                            <option value="CYBORG">Cyborg (Augmented)</option>
-                            <option value="RECLAIMER">Reclaimer (Wastelander)</option>
+    <!-- Character Creator -->
+    <div id="creator-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+        <div class="neon-panel w-full max-w-4xl p-8 rounded-lg">
+            <div class="flex flex-col md:flex-row gap-12">
+                <div class="flex-1 space-y-6">
+                    <h2 class="text-4xl font-bold font-['Orbitron'] text-cyan-400 italic tracking-tighter">NEON_GEAR</h2>
+                    <div class="space-y-4">
+                        <input id="char-name" type="text" placeholder="ID_IDENTIFIER" class="w-full bg-cyan-900/20 border border-cyan-500/50 p-4 text-cyan-400 outline-none">
+                        <select id="char-race" class="w-full bg-cyan-900/20 border border-cyan-500/50 p-4 text-cyan-400 outline-none">
+                            <option value="HUMAN">BIO_UNIT: HUMAN</option>
+                            <option value="ANDROID">SYNTH_UNIT: ANDROID</option>
+                            <option value="CYBORG">AUG_UNIT: CYBORG</option>
                         </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-cyan-500 mb-1 uppercase">Visual Signature</label>
-                        <input id="char-color" type="color" value="#00f2ff" class="w-full h-12 p-1 border-none cursor-pointer">
+                        <input id="char-color" type="color" value="#00f2ff" class="w-full h-12 border-none bg-transparent">
                     </div>
                 </div>
-            </div>
-
-            <!-- Right: Stats -->
-            <div class="flex-1 flex flex-col justify-between">
-                <div class="bg-cyan-900/10 p-6 neon-border space-y-6">
+                <div class="flex-1 space-y-6">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-['Orbitron'] text-xl text-cyan-400">CORE STATS</h3>
-                        <div class="text-xs bg-cyan-500/20 px-2 py-1">Points Left: <span id="stat-points" class="font-bold">20</span></div>
+                        <span class="text-cyan-600 text-xs">ALLOCATION_POINTS</span>
+                        <span id="stat-points" class="text-2xl font-bold text-cyan-400">20</span>
                     </div>
-                    
-                    <div id="stat-container" class="space-y-4">
-                        <!-- Stats will be injected here -->
-                    </div>
+                    <div id="stat-container" class="space-y-6"></div>
+                    <button id="start-btn" class="w-full py-4 bg-cyan-500 text-black font-bold font-['Orbitron'] hover:bg-white transition-colors">BOOT_SEQUENCE()</button>
                 </div>
-
-                <button id="start-btn" 
-                        class="mt-8 w-full py-4 bg-cyan-600/20 border border-cyan-500 text-cyan-400 font-['Orbitron'] hover:bg-cyan-500 hover:text-black transition-all uppercase tracking-[0.2em]">
-                    Initialize Sequence
-                </button>
             </div>
         </div>
     </div>
-    
-    <!-- HUD Overlay (Initially Hidden) -->
-    <div id="ui-layer" class="hidden fixed inset-0 z-10 flex flex-col justify-between p-6">
-        <header class="flex justify-between items-start">
-            <div class="neon-border bg-black/80 p-4 backdrop-blur-md">
-                <h1 class="text-xl font-bold text-cyan-400 font-['Orbitron'] tracking-widest">PROJECT: NEON-GEAR</h1>
-                <div class="flex gap-4 mt-2">
-                    <div id="hud-name" class="text-[10px] text-cyan-400 font-bold uppercase">USER: ---</div>
-                    <div id="hud-race" class="text-[10px] text-cyan-700 uppercase">SEC: 7-G</div>
+
+    <!-- HUD -->
+    <div id="ui-layer" class="hidden fixed inset-0 pointer-events-none p-6 flex flex-col justify-between">
+        <div class="flex justify-between items-start">
+            <div class="neon-panel p-4 w-64 pointer-events-auto">
+                <div id="hud-name" class="text-cyan-400 font-bold font-['Orbitron']">---</div>
+                <div class="stat-bar mt-2"><div class="stat-bar-fill" style="width: 100%"></div></div>
+                <div class="flex justify-between mt-1">
+                    <span class="text-[8px] text-cyan-700">HP_STABILITY</span>
+                    <span class="text-[8px] text-cyan-700">100%</span>
                 </div>
             </div>
-            <div id="coords" class="text-cyan-400 bg-black/60 p-2 text-xs">X: 0 Y: 0</div>
-        </header>
-
-        <footer class="flex justify-center gap-4">
-            <nav class="neon-border bg-black/80 p-2 flex gap-2 backdrop-blur-md">
-                <button class="px-4 py-2 bg-cyan-900/30 hover:bg-cyan-500/50 text-cyan-400 transition-all text-xs">INVENTORY</button>
-                <button class="px-4 py-2 bg-cyan-900/30 hover:bg-cyan-500/50 text-cyan-400 transition-all text-xs">BLUEPRINTS</button>
-                <button class="px-4 py-2 bg-cyan-900/30 hover:bg-cyan-500/50 text-cyan-400 transition-all text-xs">SYSTEM</button>
-            </nav>
-        </footer>
+            <div class="neon-panel p-2 pointer-events-auto">
+                <div id="coords" class="text-cyan-500 text-[10px]">LOC: 0.0</div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="src/main.js"></script>

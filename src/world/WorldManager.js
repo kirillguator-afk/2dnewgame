@@ -48,7 +48,7 @@ export class WorldManager {
         this.player.anchor.set(0.5, 0.95);
         this.layers.WORLD_OBJECTS.addChild(this.player);
         
-        this.moveSpeed = 240 + (charData.stats.dex * 10);
+        this.moveSpeed = 240 + (charData.stats.dex * 8);
         this.manageChunks();
     }
 
@@ -86,7 +86,7 @@ export class WorldManager {
             d.timer -= dt;
             if (d.timer <= 0) {
                 d.state = Math.random() > 0.6 ? 'walking' : 'idle';
-                d.timer = 3 + Math.random() * 5;
+                d.timer = 4 + Math.random() * 6;
                 d.vx = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
                 d.vy = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
             }
@@ -101,7 +101,7 @@ export class WorldManager {
     createChunk(cx, cy) {
         const floor = new PIXI.Container();
         const roofs = new PIXI.Container();
-        const worldObjects = [];
+        const chunkObjs = [];
         const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
         floor.position.set(cx * chunkPx, cy * chunkPx);
         roofs.position.set(cx * chunkPx, cy * chunkPx);
@@ -112,8 +112,7 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                const tileTex = this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`];
-                const tile = new PIXI.Sprite(tileTex);
+                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`]);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
@@ -121,47 +120,43 @@ export class WorldManager {
                     BuildingTemplates.getHouseSchema(data.structure).forEach(p => {
                         const wx = (gx + p.x) * 32;
                         const wy = (gy + p.y) * 32;
-                        const tex = p.anim ? this.envTextures.animated_magic_fire : (this.envTextures[p.t] || this.buildTextures[p.t]);
-                        
                         if (p.l === 'r') {
-                            const s = new PIXI.Sprite(tex);
-                            s.position.set((gx - cx * CONFIG.CHUNK_SIZE + p.x) * 32, (gy - cy * CONFIG.CHUNK_SIZE + p.y) * 32);
+                            const s = new PIXI.Sprite(this.buildTextures[p.t]);
+                            s.position.set((tx + p.x) * 32, (ty + p.y) * 32);
                             s.userData = { gx: gx + p.x, gy: gy + p.y };
                             roofs.addChild(s);
                         } else {
-                            const s = p.anim ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
+                            const tex = this.envTextures[p.t] || this.buildTextures[p.t];
+                            const s = new PIXI.Sprite(tex);
                             s.position.set(wx, wy); s.zIndex = wy + 16;
-                            if(p.anim) { s.animationSpeed=0.1; s.play(); }
                             this.layers.WORLD_OBJECTS.addChild(s);
-                            worldObjects.push(s);
+                            chunkObjs.push(s);
                         }
                     });
                 }
 
-                if (data.deco && !data.structure) {
+                if (data.deco) {
                     const tex = this.envTextures[data.deco];
-                    const obj = Array.isArray(tex) ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
-                    const wx = gx * 32 + 16;
-                    const wy = gy * 32 + 32;
+                    const obj = new PIXI.Sprite(tex);
                     obj.anchor.set(0.5, 0.95);
-                    obj.position.set(wx, wy); obj.zIndex = wy;
-                    if (Array.isArray(tex)) { obj.animationSpeed = 0.1; obj.play(); }
+                    obj.position.set(gx * 32 + 16, gy * 32 + 32);
+                    obj.zIndex = obj.y;
                     this.layers.WORLD_OBJECTS.addChild(obj);
-                    worldObjects.push(obj);
+                    chunkObjs.push(obj);
                 }
 
-                if (data.npc && !data.structure) {
+                if (data.npc) {
                     const npc = NPCFactory.createNPC(this.app, data.npc, '#ffffff');
                     npc.position.set(gx * 32 + 16, gy * 32 + 16);
                     this.layers.WORLD_OBJECTS.addChild(npc);
                     this.npcs.push(npc);
-                    worldObjects.push(npc);
+                    chunkObjs.push(npc);
                 }
             }
         }
         this.layers.FLOOR.addChild(floor);
         this.layers.STRUCTURE_ROOF.addChild(roofs);
-        this.loadedChunks.set(`${cx},${cy}`, { floor, roofs, worldObjects });
+        this.loadedChunks.set(`${cx},${cy}`, { floor, roofs, chunkObjs });
     }
 
     manageChunks() {
@@ -180,7 +175,7 @@ export class WorldManager {
                 if (Math.abs(cx - curX) > 2 || Math.abs(cy - curY) > 2) {
                     chunk.floor.destroy({ children: true });
                     chunk.roofs.destroy({ children: true });
-                    chunk.worldObjects.forEach(obj => {
+                    chunk.chunkObjs.forEach(obj => {
                         const idx = this.npcs.indexOf(obj);
                         if(idx > -1) this.npcs.splice(idx, 1);
                         obj.destroy();
@@ -195,8 +190,8 @@ export class WorldManager {
         const px = Math.floor(this.cameraPos.x / 32);
         const py = Math.floor(this.cameraPos.y / 32);
         this.layers.STRUCTURE_ROOF.children.forEach(c => c.children.forEach(r => {
-            const dx = r.userData.gx - px, dy = r.userData.gy - py;
-            r.alpha = (dx*dx + dy*dy < 12) ? 0.3 : 1.0;
+            const dist = Math.sqrt(Math.pow(r.userData.gx - px, 2) + Math.pow(r.userData.gy - py, 2));
+            r.alpha = dist < 3.5 ? 0.3 : 1.0;
         }));
     }
 

@@ -19,42 +19,29 @@ export class TerrainGenerator {
         const dy = gy - this.centerY;
         const dist = Math.sqrt(dx*dx + dy*dy);
 
-        // 1. Определение зоны (Зонирование Королевства)
+        // Зонирование
         let biome = BIOMES.WILDERNESS;
         if (dist < 80) biome = BIOMES.CITADEL;
-        else if (dist < 250) biome = BIOMES.HIGH_CITY;
-        else if (dist < 500) biome = BIOMES.SUBURBS;
-        else if (dist < 800) biome = BIOMES.FARMLAND;
+        else if (dist < 200) biome = BIOMES.HIGH_CITY;
+        else if (dist < 400) biome = BIOMES.FARMLAND;
 
-        // 2. Королевские тракты (Дороги)
         const roadVal = Math.abs(this.noises.roads.perlin(gx * 0.02, gy * 0.02));
-        const isRoad = roadVal < 0.04 && dist > 30; // Дороги начинаются за пределами дворца
+        const isRoad = roadVal < 0.04 && dist > 20;
         if (isRoad) biome = BIOMES.ROAD;
 
-        // 3. Структурная логика (Размещение без хаоса)
         let structure = null, deco = null, npc = null;
         const objVal = (this.noises.objects.perlin(gx * 0.5, gy * 0.5) + 1) / 2;
 
         if (biome.id === 'citadel') {
-            if (gx === this.centerX - 5 && gy === this.centerY - 5) structure = 'castle_keep';
-            else if (dist > 75 && dist < 78 && gx % 8 === 0) structure = 'watchtower';
-        } 
-        else if (biome.id === 'high_city' && !isRoad) {
-            if (gx % 16 === 0 && gy % 16 === 0) structure = 'noble_house';
-            else if (objVal > 0.8) deco = 'garden_statue';
-        }
-        else if (biome.id === 'suburbs' && !isRoad) {
-            if (gx % 12 === 0 && gy % 12 === 0) structure = 'city_shop';
-            else if (objVal > 0.7) deco = 'market_cart';
-        }
-        else if (biome.id === 'farmland' && !isRoad) {
+            if (gx === this.centerX && gy === this.centerY) structure = 'castle_keep';
+        } else if (biome.id === 'high_city' && !isRoad) {
+            if (gx % 15 === 0 && gy % 15 === 0) structure = 'city_house';
+        } else if (biome.id === 'farmland' && !isRoad) {
             if (gx % 20 === 0 && gy % 20 === 0) structure = 'peasant_hut';
-            else if (objVal > 0.6) deco = 'village_haystack';
+            else if (objVal > 0.6) deco = 'nature_wheat';
             if (objVal < 0.05) npc = 'cow';
-        }
-        else if (biome.id === 'wild' && objVal > 0.9) {
+        } else if (biome.id === 'wild' && objVal > 0.9) {
             deco = 'nature_oak';
-            if (objVal > 0.98) npc = 'deer';
         }
 
         return { biome, isRoad, structure, deco, npc };

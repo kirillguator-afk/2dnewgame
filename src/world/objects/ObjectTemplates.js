@@ -12,7 +12,7 @@ export class ObjectTemplates {
 
         const addGrit = (gr, x, y, w, h) => {
             gr.beginFill(0x000000, 0.1);
-            for(let i=0; i<10; i++) gr.drawRect(x + Math.random()*w, y + Math.random()*h, 1, 1);
+            for(let i=0; i<12; i++) gr.drawRect(x + Math.random()*w, y + Math.random()*h, 1, 1);
             gr.endFill();
         };
 
@@ -35,11 +35,7 @@ export class ObjectTemplates {
         create('int_bookshelf', g => {
             g.beginFill(0x3e2723).drawRect(2, 4, 28, 28);
             g.beginFill(0x8d6e63).drawRect(4, 10, 24, 2).drawRect(4, 20, 24, 2);
-            g.beginFill(0x2980b9).drawRect(6, 6, 3, 4).beginFill(0xc0392b).drawRect(12, 6, 2, 4);
-        });
-
-        create('tavern_table', g => {
-            g.beginFill(0x5d4037).drawRect(4, 12, 24, 4).drawRect(6, 16, 4, 12).drawRect(22, 16, 4, 12);
+            g.beginFill(0x2980b9).drawRect(6, 6, 3, 4);
         });
 
         create('market_stall', g => {
@@ -48,31 +44,16 @@ export class ObjectTemplates {
             g.lineStyle(2, 0x3e2723).moveTo(4,10).lineTo(4,22).moveTo(28,10).lineTo(28,22);
         });
 
-        // --- ДЕКОР ---
-        create('castle_torch', g => {
-            g.beginFill(0x34495e).drawRect(14, 18, 4, 8);
-            g.beginFill(0xe67e22).drawCircle(16, 14, 5);
-        });
-
-        create('village_haystack', g => {
-            g.beginFill(0xf1c40f).drawPolygon([4,32, 28,32, 16,8]);
-            g.beginFill(0xd4af37, 0.5).drawRect(8, 28, 16, 2);
-        });
-
+        // --- ПРИРОДА ---
         create('nature_oak', g => {
             g.beginFill(0x2d1b0d).drawRect(12, 16, 8, 16);
             g.beginFill(0x1e3a1a).drawCircle(16, 10, 14).drawCircle(8, 14, 10).drawCircle(24, 14, 10);
         });
 
-        // --- АНИМАЦИИ ---
-        const magFire = [];
-        for(let i=0; i<4; i++) {
-            g.clear();
-            g.beginFill(0x2c3e50).drawCircle(16, 28, 7);
-            g.beginFill(0x3498db).drawPolygon([10,24, 16, 4+i*3, 22,24]);
-            magFire.push(app.renderer.generateTexture(g));
-        }
-        textures.animated_magic_fire = magFire;
+        create('nature_wheat', g => {
+            g.beginFill(0xd4af37).drawRect(14, 8, 4, 24);
+            g.beginFill(0xf1c40f).drawCircle(16, 6, 4);
+        });
 
         return textures;
     }

@@ -10,52 +10,73 @@ export class TerrainGenerator {
             moisture: new Noise(seed + 101),
             roads: new Noise(seed + 202),
             objects: new Noise(seed + 303),
-            biomes: new Noise(seed + 404)
+            distort: new Noise(seed + 404)
         };
         this.centerX = 500000;
         this.centerY = 500000;
     }
 
+    getFractalNoise(noise, x, y, oct = 4) {
+        let t = 0, f = 0.005, a = 1, max = 0;
+        for (let i = 0; i < oct; i++) {
+            t += noise.perlin(x * f, y * f) * a;
+            max += a; a *= 0.5; f *= 2;
+        }
+        return (t / max + 1) / 2;
+    }
+
     getTileData(gx, gy) {
-        // 1. Климат
-        const h = (this.noises.height.perlin(gx * 0.005, gy * 0.005) + 1) / 2;
-        const m = (this.noises.moisture.perlin(gx * 0.01, gy * 0.01) + 1) / 2;
+        // Искажение для "ручного" вида дорог
+        const dX = this.noises.distort.perlin(gx*0.04, gy*0.04) * 10;
+        const dY = this.noises.distort.perlin(gy*0.04, gx*0.04) * 10;
+
+        // 1. Климат и форма материка
+        const dx = (gx - this.centerX) / 3000, dy = (gy - this.centerY) / 3000;
+        const dist = Math.sqrt(dx*dx + dy*dy);
         
+        let h = this.getFractalNoise(this.noises.height, gx + dX, gy + dY, 6);
+        h *= Math.max(0, 1.15 - dist * dist); // Океан по краям
+
+        const m = this.getFractalNoise(this.noises.moisture, gx, gy, 3);
+        const roadVal = Math.abs(this.noises.roads.perlin((gx+dX)*0.015, (gy+dY)*0.015));
+        const isRoad = roadVal < 0.032 && h > CONFIG.SEA_LEVEL;
+
         let biome = BIOMES.OCEAN;
-        if (h > 0.28) {
-            if (h < 0.31) biome = BIOMES.BEACH;
-            else if (h > 0.75) biome = BIOMES.MOUNTAINS;
-            else biome = m > 0.6 ? BIOMES.FOREST : m > 0.4 ? BIOMES.PLAINS : BIOMES.WASTELAND;
+        if (h > CONFIG.SEA_LEVEL) {
+            if (h < CONFIG.SEA_LEVEL + 0.03) biome = BIOMES.BEACH;
+            else if (h > 0.75) biome = BIOMES.TAIGA;
+            else biome = m > 0.6 ? BIOMES.FOREST : BIOMES.PLAINS;
         }
 
         const distToCenter = Math.sqrt(Math.pow(gx-this.centerX, 2) + Math.pow(gy-this.centerY, 2));
-        if (distToCenter < 120) biome = BIOMES.VILLAGE;
+        const isSettlement = distToCenter < CONFIG.VILLAGE_RADIUS;
 
-        // 2. Дороги
-        const rVal = Math.abs(this.noises.roads.perlin(gx * 0.02, gy * 0.02));
-        const isRoad = rVal < 0.035 && h > 0.28;
-
-        // 3. Объекты и логика размещения
-        let structure = null, deco = null, npc = null;
-        const objN = (this.noises.objects.perlin(gx * 0.4, gy * 0.4) + 1) / 2;
-
-        if (biome.id === 'village' && !isRoad) {
-            if (gx % 20 === 0 && gy % 20 === 0) {
-                structure = (gx + gy) % 40 === 0 ? 'town_hall' : 'tavern';
-            } else if (objN > 0.85) {
-                deco = (gx % 2 === 0) ? 'market_stall' : 'village_cart';
-            }
-        } else if (biome.id === 'forest' && !isRoad) {
-            if (objN > 0.8) deco = (objN > 0.9) ? 'tree_oak' : 'tree_pine';
-            if (objN < 0.05) npc = 'deer';
-        } else if (biome.id === 'plains' && !isRoad) {
-            if (objN > 0.95) deco = 'tree_birch';
-            if (objN < 0.02) npc = 'bird';
-        } else if (h > 0.5 && objN > 0.99) {
-            // Редкие руины в горах/лесах
-            structure = 'wizard_tower';
+        if (isSettlement && !isRoad) {
+            const farmNoise = (this.noises.objects.perlin(gx*0.05, gy*0.05) + 1) / 2;
+            if (farmNoise > 0.65) biome = BIOMES.FARMLAND;
+            else biome = BIOMES.VILLAGE;
         }
 
-        return { biome, isRoad, structure, deco, npc };
+        // 2. Логика Объектов
+        let structure = null, deco = null, npc = null, isAnimated = false;
+        const objN = (this.noises.objects.perlin(gx*0.4, gy*0.4) + 1) / 2;
+
+        if (biome.id === 'village' && !isRoad) {
+            // Здания только по сетке вдоль дорог
+            if (gx % 16 === 0 && gy % 16 === 0) {
+                structure = (gx + gy) % 48 === 0 ? 'tavern' : 'hut';
+            } else if (objN > 0.8) {
+                deco = (gx % 2 === 0) ? 'village_well_stone' : 'village_fence_h';
+            }
+        } else if (biome.id === 'farmland') {
+            if (objN > 0.6) deco = 'crop_wheat';
+            if (gx % 12 === 0 && gy % 12 === 0) npc = (gx % 24 === 0) ? 'cow' : 'sheep';
+        } else if (biome.id === 'forest' && !isRoad && objN > 0.88) {
+            deco = (gx % 2 === 0) ? `tree_forest_${(Math.abs(gx)%5)+1}` : `tree_birch_${(Math.abs(gy)%5)+1}`;
+        } else if (biome.id === 'plains' && !isRoad && objN > 0.98) {
+            deco = 'animated_fire'; isAnimated = true;
+        }
+
+        return { biome, isRoad, structure, deco, npc, isAnimated };
     }
 }

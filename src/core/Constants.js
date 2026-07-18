@@ -4,26 +4,25 @@ export const CONFIG = {
     CHUNK_SIZE: 16,
     WORLD_SIZE: 1000000,
     VILLAGE_RADIUS: 150,
+    SEA_LEVEL: 0.28,
     LAYERS: {
-        FLOOR: 0,           // Трава, песок, тропы
-        FLOOR_DECO: 1,      // Мелкие камушки, травинки
-        SHADOWS: 2,         // Тени от всех объектов
-        WORLD_OBJECTS: 3,   // Игрок, NPC, Деревья, Стены (Y-Sorted)
-        STRUCTURE_ROOF: 4,  // Крыши
-        UI_OVERLAY: 5       // Интерфейс
+        FLOOR: 0,           // Земля, песок, вода
+        SHADOWS: 1,         // Тени под всеми объектами
+        WORLD_OBJECTS: 2,   // Игрок, NPC, Деревья, Мебель (Y-Sorted)
+        STRUCTURE_ROOF: 3,  // Крыши домов (Alpha-faded)
+        UI_OVERLAY: 4       // HUD
     }
 };
 
 export const BIOMES = {
-    DEEP_OCEAN: { id: 'deep_ocean', color: 0x0a1931, accent: 0x1e3799, name: 'Бездна' },
-    OCEAN: { id: 'ocean', color: 0x1e3799, accent: 0x4834d4, name: 'Океан' },
-    BEACH: { id: 'beach', color: 0xf7d794, accent: 0xf3a683, name: 'Пески' },
-    FOREST: { id: 'forest', color: 0x1e3a1a, accent: 0x27ae60, name: 'Вековой Лес' },
-    TAIGA: { id: 'taiga', color: 0x2d3436, accent: 0x636e72, name: 'Тайга' },
+    OCEAN: { id: 'ocean', color: 0x1a3a5a, accent: 0x0a1931, name: 'Океан' },
+    BEACH: { id: 'beach', color: 0xd4af37, accent: 0xc49a27, name: 'Пляж' },
+    FOREST: { id: 'forest', color: 0x2d4a2d, accent: 0x1e3a1a, name: 'Вековой Лес' },
     PLAINS: { id: 'plains', color: 0x588157, accent: 0x3a5a40, name: 'Равнины' },
-    FARMLAND: { id: 'farmland', color: 0x3d2b1f, accent: 0x5d4037, name: 'Пашни' },
-    VILLAGE: { id: 'village', color: 0x4a4e52, accent: 0x2f3542, name: 'Город' },
-    ROAD: { id: 'road', color: 0x3d3126, accent: 0x574b3a, name: 'Тракт' }
+    TAIGA: { id: 'taiga', color: 0x3d4147, accent: 0x2c3e50, name: 'Тайга' },
+    FARMLAND: { id: 'farmland', color: 0x5d4037, accent: 0x3e2723, name: 'Пашни' },
+    VILLAGE: { id: 'village', color: 0x4a4e52, accent: 0x2f3542, name: 'Поселение' },
+    ROAD: { id: 'road', color: 0x3d3126, accent: 0x2d1b0d, name: 'Тракт' }
 };
 
 export const RACES = {

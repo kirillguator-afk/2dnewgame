@@ -7,10 +7,10 @@ export class CharacterCreator {
         this.pointsPool = 20;
         this.stats = { str: 0, dex: 0, int: 0, tec: 0 };
         this.statNames = {
-            str: 'Might (Strength)',
-            dex: 'Swiftness (Speed)',
-            int: 'Wisdom (Magic)',
-            tec: 'Crafting (Mechanics)'
+            str: 'Сила (Урон и Вес)',
+            dex: 'Ловкость (Скорость)',
+            int: 'Интеллект (Магия)',
+            tec: 'Ремесло (Инженерия)'
         };
 
         this.elements = {
@@ -31,7 +31,7 @@ export class CharacterCreator {
         this.renderStats();
         this.elements.startBtn.addEventListener('click', () => {
             if (this.elements.name.value.length < 2) {
-                alert("Enter your name, adventurer!");
+                alert("Введите имя героя!");
                 return;
             }
             this.finish();
@@ -49,13 +49,13 @@ export class CharacterCreator {
             div.className = 'flex items-center justify-between';
             div.innerHTML = `
                 <div>
-                    <div class="text-yellow-600 uppercase font-bold text-sm">${key}</div>
-                    <div class="text-[10px] text-gray-500 uppercase">${label}</div>
+                    <div class="text-yellow-600 uppercase font-bold text-lg">${key.toUpperCase()}</div>
+                    <div class="text-xs text-gray-400 uppercase">${label}</div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <button class="stat-btn rpg-button w-8 h-8" data-key="${key}" data-mod="-1">-</button>
-                    <span class="w-8 text-center text-xl font-bold">${baseValue + this.stats[key]}</span>
-                    <button class="stat-btn rpg-button w-8 h-8" data-key="${key}" data-mod="1">+</button>
+                <div class="flex items-center gap-6">
+                    <button class="stat-btn rpg-button w-10 h-10 text-xl" data-key="${key}" data-mod="-1">-</button>
+                    <span class="w-10 text-center text-3xl font-['Ruslan_Display']">${baseValue + this.stats[key]}</span>
+                    <button class="stat-btn rpg-button w-10 h-10 text-xl" data-key="${key}" data-mod="1">+</button>
                 </div>
             `;
             this.elements.container.appendChild(div);
@@ -81,8 +81,8 @@ export class CharacterCreator {
 
     finish() {
         const charData = {
-            name: this.elements.name.value || "Traveler",
-            race: this.elements.race.value,
+            name: this.elements.name.value || "Странник",
+            race: RACES[this.elements.race.value].name,
             color: this.elements.color.value,
             stats: { ...RACES[this.elements.race.value].stats }
         };

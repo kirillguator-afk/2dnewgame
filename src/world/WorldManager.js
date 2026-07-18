@@ -12,35 +12,28 @@ import { CONFIG, BIOMES } from '../core/Constants.js';
 export class WorldManager {
     constructor(app) {
         this.app = app;
+        // Центр мира в пикселях
         this.cameraPos = { x: 500000 * 32, y: 500000 * 32 };
         this.loadedChunks = new Map();
         this.entities = new Map();
         
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
         
-        this.worldContainer = new PIXI.Container();
-        this.roofContainer = new PIXI.Container();
-        this.atmosContainer = new PIXI.Container();
+        // Инициализация слоев (Containers)
+        this.layers = {};
+        Object.keys(CONFIG.LAYERS).forEach(key => {
+            const container = new PIXI.Container();
+            this.app.stage.addChild(container);
+            this.layers[key] = container;
+        });
 
-        this.app.stage.addChild(this.worldContainer);
-        this.app.stage.addChild(this.roofContainer);
-        this.app.stage.addChild(this.atmosContainer);
-        
         this.generator = new TerrainGenerator(Date.now());
         this.kineticSystem = new KineticSystem();
-        this.vfxSystem = new VfxSystem(this.app, this.app.stage);
-        this.atmosphere = new AtmosphereSystem(this.app, this.atmosContainer);
+        this.vfxSystem = new VfxSystem(this.app, this.layers.VFX);
+        this.atmosphere = new AtmosphereSystem(this.app, this.layers.ATMOSPHERE);
         this.buildingSystem = new BuildingSystem(this);
         
         this.animTimer = 0;
-        this.applyPostProcessing();
-    }
-
-    applyPostProcessing() {
-        const colorMatrix = new PIXI.ColorMatrixFilter();
-        colorMatrix.contrast(0.15);
-        colorMatrix.saturate(0.05);
-        this.app.stage.filters = [colorMatrix];
     }
 
     async loadResources() {
@@ -56,19 +49,21 @@ export class WorldManager {
         const charAssets = CharacterFactory.createRaceTexture(this.app, charData.race, charData.color);
         this.playerFrames = charAssets.frames;
         
-        // Shadow Sprite
+        // Тень
         this.playerShadow = new PIXI.Sprite(charAssets.shadow);
         this.playerShadow.anchor.set(0.5);
-        this.playerShadow.position.set(window.innerWidth / 2, window.innerHeight / 2);
-        this.app.stage.addChildAt(this.playerShadow, CONFIG.LAYERS.PLAYER_SHADOW);
+        this.layers.PLAYER_SHADOW.addChild(this.playerShadow);
 
-        // Player Sprite
+        // Персонаж
         this.player = new PIXI.Sprite(this.playerFrames[0]);
         this.player.anchor.set(0.5, 1.0);
-        this.player.position.set(window.innerWidth / 2, window.innerHeight / 2);
-        this.app.stage.addChildAt(this.player, CONFIG.LAYERS.PLAYER);
+        this.layers.PLAYER.addChild(this.player);
         
-        this.moveSpeed = 220 + (charData.stats.dex * 12);
+        // Фиксация позиции игрока по центру экрана
+        this.player.position.set(window.innerWidth / 2, window.innerHeight / 2);
+        this.playerShadow.position.set(window.innerWidth / 2, window.innerHeight / 2);
+
+        this.moveSpeed = 220 + (charData.stats.dex * 10);
         this.buildingSystem.setup();
     }
 
@@ -76,8 +71,6 @@ export class WorldManager {
         if (!this.player) return;
 
         let moving = false;
-        const prevPos = { ...this.cameraPos };
-
         if (input.isKeyDown('KeyW')) { this.cameraPos.y -= this.moveSpeed * dt; moving = true; }
         if (input.isKeyDown('KeyS')) { this.cameraPos.y += this.moveSpeed * dt; moving = true; }
         if (input.isKeyDown('KeyA')) { this.cameraPos.x -= this.moveSpeed * dt; this.player.scale.x = -1; moving = true; }
@@ -112,18 +105,6 @@ export class WorldManager {
                 if (!this.loadedChunks.has(key)) this.createChunk(x, y);
             }
         }
-
-        // Оптимизированная выгрузка
-        if (this.loadedChunks.size > 16) {
-            for (const [key, chunk] of this.loadedChunks) {
-                const [cx, cy] = key.split(',').map(Number);
-                if (Math.abs(cx - curX) > 2 || Math.abs(cy - curY) > 2) {
-                    chunk.body.destroy({ children: true });
-                    chunk.roof.destroy({ children: true });
-                    this.loadedChunks.delete(key);
-                }
-            }
-        }
     }
 
     createChunk(cx, cy) {
@@ -141,7 +122,7 @@ export class WorldManager {
                 
                 const tile = new PIXI.Sprite(this.baseTileTex);
                 tile.position.set(tx * 32, ty * 32);
-                tile.tint = data.isRoad ? 0x4a4e52 : data.biome.color;
+                tile.tint = data.isRoad ? 0x3a3a3a : data.biome.color;
                 bodyCont.addChild(tile);
 
                 if (data.structureType) {
@@ -158,9 +139,8 @@ export class WorldManager {
 
                 if (data.objectType && !data.structureType) {
                     const suffix = this.getTexSuffix(data.objectType, (gx + gy) % 3);
-                    const tex = this.envTextures[suffix];
-                    if (tex) {
-                        const obj = new PIXI.Sprite(tex);
+                    if (this.envTextures[suffix]) {
+                        const obj = new PIXI.Sprite(this.envTextures[suffix]);
                         obj.anchor.set(0.5, 1);
                         obj.position.set(tx * 32 + 16, ty * 32 + 32);
                         bodyCont.addChild(obj);
@@ -169,13 +149,13 @@ export class WorldManager {
             }
         }
 
-        this.worldContainer.addChild(bodyCont);
-        this.roofContainer.addChild(roofCont);
+        this.layers.FLOOR.addChild(bodyCont);
+        this.layers.STRUCTURE_ROOF.addChild(roofCont);
         this.loadedChunks.set(`${cx},${cy}`, { body: bodyCont, roof: roofCont });
     }
 
     getTexSuffix(type, variation) {
-        const v = variation + 1;
+        const v = (variation % 3) + 1;
         if (type === 'forest') return v === 3 ? 'forest_flower' : `forest_tree_${v}`;
         if (type === 'wasteland') return v === 1 ? 'wasteland_bush' : v === 2 ? 'wasteland_bones' : 'wasteland_ruin';
         if (type === 'mountains') return v === 3 ? 'mountains_crystal' : `mountains_rock_${v}`;
@@ -187,31 +167,20 @@ export class WorldManager {
         const px = Math.floor(this.cameraPos.x / 32);
         const py = Math.floor(this.cameraPos.y / 32);
         
-        // Проверяем только ближайшие к игроку чанки (центральный + соседи)
-        const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
-        const curX = Math.floor(this.cameraPos.x / chunkPx);
-        const curY = Math.floor(this.cameraPos.y / chunkPx);
-
-        for(let x = curX-1; x <= curX+1; x++) {
-            for(let y = curY-1; y <= curY+1; y++) {
-                const chunk = this.loadedChunks.get(`${x},${y}`);
-                if (chunk) {
-                    chunk.roof.children.forEach(roofTile => {
-                        const dx = roofTile.userData.gx - px;
-                        const dy = roofTile.userData.gy - py;
-                        const distSq = dx*dx + dy*dy;
-                        roofTile.alpha = distSq < 5 ? 0.25 : 1.0;
-                    });
-                }
-            }
-        }
+        this.loadedChunks.forEach(chunk => {
+            chunk.roof.children.forEach(roofTile => {
+                const distSq = Math.pow(roofTile.userData.gx - px, 2) + Math.pow(roofTile.userData.gy - py, 2);
+                roofTile.alpha = distSq < 4 ? 0.2 : 1.0;
+            });
+        });
     }
 
     renderChunks() {
-        const ox = -this.cameraPos.x + window.innerWidth / 2;
-        const oy = -this.cameraPos.y + window.innerHeight / 2;
-        // Используем Math.round только для финальной отрисовки, чтобы избежать щелей
-        this.worldContainer.position.set(Math.round(ox), Math.round(oy));
-        this.roofContainer.position.set(Math.round(ox), Math.round(oy));
+        const ox = Math.round(-this.cameraPos.x + window.innerWidth / 2);
+        const oy = Math.round(-this.cameraPos.y + window.innerHeight / 2);
+        
+        this.layers.FLOOR.position.set(ox, oy);
+        this.layers.STRUCTURE_ROOF.position.set(ox, oy);
+        this.layers.VFX.position.set(ox, oy);
     }
 }

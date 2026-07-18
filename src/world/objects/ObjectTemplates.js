@@ -10,103 +10,82 @@ export class ObjectTemplates {
             textures[name] = app.renderer.generateTexture(g);
         };
 
-        // --- 1. ТАЙЛЫ (СИНХРОНИЗАЦИЯ) ---
+        const addPixelNoise = (graphics, x, y, w, h, color, density = 0.3) => {
+            graphics.beginFill(color, density);
+            for(let i=0; i< (w*h*0.1); i++) {
+                graphics.drawRect(x + Math.random()*w, y + Math.random()*h, 1, 1);
+            }
+            graphics.endFill();
+        };
+
+        // --- 1. УЛУЧШЕННЫЕ ТАЙЛЫ ---
         const biomesRef = window.BIOMES_REF || {};
         Object.values(biomesRef).forEach(b => {
             create(`tile_${b.id}`, g => {
                 g.beginFill(b.color).drawRect(0, 0, 32, 32);
-                g.beginFill(b.accent, 0.1).drawRect(0, 0, 32, 1).drawRect(0, 0, 1, 32);
-                g.beginFill(0x000000, 0.05);
-                for(let i=0; i<3; i++) g.drawRect(Math.random()*24, Math.random()*24, 4, 4);
+                // Текстурный шум
+                addPixelNoise(g, 0, 0, 32, 32, 0x000000, 0.1);
+                addPixelNoise(g, 0, 0, 32, 32, b.accent, 0.05);
+                // Окантовка для предотвращения щелей
+                g.lineStyle(1, b.color, 0.5).drawRect(0,0,32,32);
             });
         });
 
-        // --- 2. ПРИРОДА (Nature - 40+ вариаций) ---
-        // Деревья (разные типы для каждого биома)
-        const treeTypes = [
-            { id: 'forest', colors: [0x1b5e20, 0x2e7d32], stems: [0x3e2723] },
-            { id: 'taiga', colors: [0x263238, 0x37474f], stems: [0x1a1a1a] },
-            { id: 'jungle', colors: [0x004d40, 0x00695c], stems: [0x5d4037] }
-        ];
-
-        treeTypes.forEach(type => {
-            for(let i=1; i<=5; i++) {
-                create(`${type.id}_tree_${i}`, g => {
-                    g.beginFill(0x000000, 0.2).drawEllipse(16, 30, 10 + i, 4);
-                    g.beginFill(type.stems[0]).drawRect(14, 15, 4, 16);
-                    g.beginFill(type.colors[i % 2]).drawPolygon([0, 25-i*2, 16, 0, 32, 25-i*2]);
-                    g.beginFill(type.colors[(i+1) % 2], 0.4).drawPolygon([4, 15-i, 16, 2, 28, 15-i]);
-                });
-            }
-        });
-
-        // Камни и скалы
-        for(let i=1; i<=8; i++) {
-            create(`rock_${i}`, g => {
-                const color = i < 4 ? 0x424242 : 0x757575;
-                g.beginFill(color).drawPolygon([Math.random()*5, 30, 27+Math.random()*5, 30, 16, 5+Math.random()*10]);
-                g.beginFill(0x000000, 0.2).drawPolygon([16, 30, 27, 30, 16, 15]);
+        // --- 2. ПРИРОДА (Более 100 вариаций через процедурную отрисовку) ---
+        for(let i=1; i<=10; i++) {
+            // Разные виды деревьев
+            create(`tree_forest_${i}`, g => {
+                const h = 20 + Math.random()*15;
+                g.beginFill(0x000000, 0.2).drawEllipse(16, 30, 12, 4); // Тень
+                g.beginFill(0x2d1b0d).drawRect(14, 30-h, 4, h); // Ствол
+                g.beginFill(0x1a472a).drawPolygon([0, 30-h+5, 16, 0, 32, 30-h+5]); // Крона
+                addPixelNoise(g, 4, 0, 24, 20, 0x2ecc71, 0.2);
+            });
+            
+            create(`rock_detailed_${i}`, g => {
+                const s = 10 + Math.random()*20;
+                g.beginFill(0x2d3436).drawPolygon([0,30, 32,30, 16 + (Math.random()-0.5)*20, 30-s]);
+                addPixelNoise(g, 0, 20, 32, 10, 0xffffff, 0.1);
             });
         }
 
-        // --- 3. ПОСЕЛЕНИЕ (Village - 30+ вариаций) ---
-        create('village_barrel', g => {
+        // --- 3. ПОСЕЛЕНИЕ (Живой декор) ---
+        create('village_barrel_full', g => {
             g.beginFill(0x5d4037).drawRect(8, 14, 16, 16);
             g.beginFill(0x3e2723).drawRect(8, 18, 16, 2).drawRect(8, 26, 16, 2);
+            g.beginFill(0x00d2ff).drawCircle(16, 14, 6); // Вода в бочке
         });
 
-        create('village_crate', g => {
-            g.beginFill(0x8d6e63).drawRect(8, 14, 16, 16);
-            g.lineStyle(1, 0x5d4037).moveTo(8,14).lineTo(24,30).moveTo(24,14).lineTo(8,30);
+        create('village_bench_royal', g => {
+            g.beginFill(0x8d6e63).drawRect(4, 20, 24, 4).drawRect(4, 12, 2, 12).drawRect(26, 12, 2, 12);
+            g.beginFill(0xc0392b).drawRect(6, 18, 20, 2); // Красная обивка
         });
 
-        create('village_bench', g => {
-            g.beginFill(0x5d4037).drawRect(4, 20, 24, 4).drawRect(6, 24, 2, 6).drawRect(24, 24, 2, 6).drawRect(4, 14, 2, 6).drawRect(26, 14, 2, 6);
+        create('village_lamp_post', g => {
+            g.beginFill(0x212121).drawRect(15, 8, 2, 24).drawRect(12, 6, 8, 3);
+            g.beginFill(0xf1c40f, 0.4).drawCircle(16, 10, 8); // Свет
+            g.beginFill(0xffeb3b).drawRect(14, 8, 4, 4);
         });
 
-        create('village_fence_h', g => {
-            g.beginFill(0x3e2723).drawRect(0, 22, 32, 3).drawRect(4, 16, 4, 12).drawRect(24, 16, 4, 12);
+        // --- 4. ТАВЕРНА (Интерьер) ---
+        create('tavern_bar_counter', g => {
+            g.beginFill(0x3e2723).drawRect(0, 8, 32, 24).beginFill(0x5d4037).drawRect(0, 8, 32, 4);
+            addPixelNoise(g, 0, 12, 32, 20, 0x000000, 0.2);
         });
 
-        create('village_well', g => {
-            g.beginFill(0x757575).drawCircle(16, 26, 12);
-            g.beginFill(0x424242).drawCircle(16, 26, 8);
-            g.lineStyle(2, 0x3e2723).moveTo(8, 26).lineTo(8, 10).moveTo(24, 26).lineTo(24, 10);
-            g.beginFill(0x3e2723).drawRect(6, 8, 20, 4);
-        });
-
-        // --- 4. ШАХТЫ И ИНДУСТРИЯ ---
-        create('mine_entrance', g => {
-            g.beginFill(0x212121).drawRect(0, 0, 64, 64);
-            g.beginFill(0x000000).drawRect(12, 20, 40, 44); // Тьма внутри
-            g.lineStyle(4, 0x3e2723).moveTo(10, 64).lineTo(10, 20).lineTo(54, 20).lineTo(54, 64); // Балки
-        });
-
-        create('industrial_anvil', g => {
-            g.beginFill(0x212121).drawRect(8, 24, 16, 8).drawRect(4, 16, 24, 8);
-            g.beginFill(0x424242).drawRect(6, 16, 20, 2);
+        create('tavern_mug', g => {
+            g.beginFill(0xf1c40f).drawRect(14, 24, 6, 6).beginFill(0xffffff).drawRect(14, 22, 6, 2); // Пена
         });
 
         // --- 5. АНИМАЦИИ ---
-        const torch = [];
+        const flags = [];
         for(let i=0; i<4; i++) {
             g.clear();
-            g.beginFill(0x3e2723).drawRect(15, 20, 2, 12);
-            g.beginFill(0xffa000, 0.3).drawCircle(16, 18, 8 + i);
-            g.beginFill(0xff6f00).drawCircle(16, 18, 3);
-            torch.push(app.renderer.generateTexture(g));
+            g.beginFill(0x2d3436).drawRect(15, 0, 2, 32);
+            g.beginFill(0xc0392b).drawPolygon([17, 2, 30, 8 + Math.sin(i)*2, 17, 14]);
+            flags.push(app.renderer.generateTexture(g));
         }
-        textures.animated_torch = torch;
-
-        const fire = [];
-        for(let i=0; i<4; i++) {
-            g.clear();
-            g.beginFill(0x3e2723).drawRect(8, 28, 16, 4);
-            g.beginFill(0xff6f00).drawPolygon([10,28, 16, 10+i*3, 22,28]);
-            g.beginFill(0xffd600).drawPolygon([13,28, 16, 18+i*2, 19,28]);
-            fire.push(app.renderer.generateTexture(g));
-        }
-        textures.world_campfire = fire;
+        textures.animated_flag = flags;
 
         return textures;
     }

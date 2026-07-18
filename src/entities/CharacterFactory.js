@@ -1,74 +1,50 @@
 
 import { RACES } from '../core/Constants.js';
 
-/**
- * Генерирует пиксельные текстуры персонажей на основе расы.
- */
 export class CharacterFactory {
     static createRaceTexture(app, raceId, primaryColor) {
-        const g = new PIXI.Graphics();
-        const color = PIXI.utils.string2hex(primaryColor);
-        
-        switch (raceId) {
-            case 'HUMAN':
-                this.drawHuman(g, color);
-                break;
-            case 'DWARVEN':
-                this.drawDwarf(g, color);
-                break;
-            case 'ELVEN':
-                this.drawElf(g, color);
-                break;
-            case 'ORCISH':
-                this.drawOrc(g, color);
-                break;
+        const textures = [];
+        const frames = 2; // Анимация из 2 кадров (левая/правая нога)
+
+        for (let f = 0; f < frames; f++) {
+            const g = new PIXI.Graphics();
+            const color = PIXI.utils.string2hex(primaryColor);
+            this.drawCharacterFrame(g, raceId, color, f);
+            textures.push(app.renderer.generateTexture(g));
         }
 
-        return app.renderer.generateTexture(g);
+        return textures;
     }
 
-    static drawHuman(g, color) {
-        g.beginFill(0xe0ac69); // Кожа
-        g.drawRect(8, 2, 16, 8); // Голова
-        g.beginFill(color); // Туника
-        g.drawRect(6, 10, 20, 16); // Тело
-        g.beginFill(0x333333); // Сапоги
-        g.drawRect(8, 26, 6, 4);
-        g.drawRect(18, 26, 6, 4);
-    }
+    static drawCharacterFrame(g, raceId, color, frame) {
+        const offset = frame * 2;
+        
+        // Shadow
+        g.beginFill(0x000000, 0.2).drawEllipse(16, 28, 10, 4);
 
-    static drawDwarf(g, color) {
-        g.beginFill(0xe0ac69);
-        g.drawRect(8, 8, 16, 8); // Голова ниже
-        g.beginFill(0xffffff); // Борода
-        g.drawRect(8, 14, 16, 6);
-        g.beginFill(color);
-        g.drawRect(4, 16, 24, 12); // Широкое тело
-        g.beginFill(0x333333);
-        g.drawRect(6, 28, 8, 4);
-        g.drawRect(18, 28, 8, 4);
-    }
-
-    static drawElf(g, color) {
-        g.beginFill(0xf3d2c1);
-        g.drawRect(10, 0, 12, 10); // Узкая голова
-        g.beginFill(0xf3d2c1); // Уши
-        g.drawRect(8, 4, 2, 4);
-        g.drawRect(22, 4, 2, 4);
-        g.beginFill(color);
-        g.drawRect(10, 10, 12, 20); // Тонкое тело
-        g.beginFill(0x2d3436);
-        g.drawRect(10, 30, 4, 2);
-        g.drawRect(18, 30, 4, 2);
-    }
-
-    static drawOrc(g, color) {
-        g.beginFill(0x4b772d); // Зеленая кожа
-        g.drawRect(6, 4, 20, 10); // Большая голова
-        g.beginFill(color);
-        g.drawRect(2, 14, 28, 14); // Массивное тело
-        g.beginFill(0x222222);
-        g.drawRect(6, 28, 10, 4);
-        g.drawRect(16, 28, 10, 4);
+        switch (raceId) {
+            case 'HUMAN':
+                g.beginFill(0xe0ac69).drawRect(10, 2, 12, 10); // Head
+                g.beginFill(color).drawRect(8, 12, 16, 14); // Body
+                g.beginFill(0x333333).drawRect(10, 26, 4, 4 - offset).drawRect(18, 26, 4, offset); // Legs
+                break;
+            case 'DWARVEN':
+                g.beginFill(0xe0ac69).drawRect(10, 6, 12, 10);
+                g.beginFill(0xffffff).drawRect(10, 14, 12, 6); // Beard
+                g.beginFill(color).drawRect(6, 16, 20, 10);
+                g.beginFill(0x222222).drawRect(8, 26, 6, 4).drawRect(18, 26, 6, 4);
+                break;
+            case 'ELVEN':
+                g.beginFill(0xf3d2c1).drawRect(11, 0, 10, 10); // Lean head
+                g.beginFill(0xf3d2c1).drawPolygon([9,4, 11,2, 11,6]).drawPolygon([23,4, 21,2, 21,6]); // Ears
+                g.beginFill(color).drawRect(10, 10, 12, 18);
+                g.beginFill(0x333333).drawRect(11, 28, 3, 4).drawRect(18, 28, 3, 4);
+                break;
+            case 'ORCISH':
+                g.beginFill(0x4b772d).drawRect(8, 2, 16, 12); // Huge head
+                g.beginFill(color).drawRect(4, 14, 24, 14); // Wide body
+                g.beginFill(0x222222).drawRect(8, 28, 6, 4).drawRect(18, 28, 6, 4);
+                break;
+        }
     }
 }

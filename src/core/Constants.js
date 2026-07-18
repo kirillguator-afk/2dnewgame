@@ -3,28 +3,25 @@ export const CONFIG = {
     TILE_SIZE: 32,
     CHUNK_SIZE: 16,
     WORLD_SIZE: 1000000,
+    VILLAGE_RADIUS: 5,
     LAYERS: {
-        BACKGROUND: 0,
-        FLOOR: 1,
+        FLOOR: 0,
+        STRUCTURE_BASE: 1,
         DECOR: 2,
-        MACHINES: 3,
-        PLAYER: 4,
-        VFX: 5,
-        UI: 6
+        PLAYER: 3,
+        STRUCTURE_ROOF: 4,
+        ATMOSPHERE: 5, // Слой для тумана и теней облаков
+        VFX: 6,
+        UI: 7
     }
 };
 
 export const BIOMES = {
-    FOREST: { id: 'forest', color: 0x2d5a27, accent: 0x2ecc71, name: 'Great Forest' },
-    WASTELAND: { id: 'wasteland', color: 0x7f4f24, accent: 0xe67e22, name: 'Old Wasteland' },
-    MOUNTAINS: { id: 'mountains', color: 0x636e72, accent: 0xbdc3c7, name: 'Iron Peaks' },
-    SWAMP: { id: 'swamp', color: 0x1e272e, accent: 0x16a085, name: 'Murky Waters' }
-};
-
-export const ENTITY_TYPES = {
-    SHAFT: 'shaft',
-    GEAR: 'gear',
-    MOTOR: 'engine'
+    FOREST: { id: 'forest', color: 0x2d5a27, accent: 0x2ecc71, name: 'Great Forest', fogColor: 0x2ecc71 },
+    WASTELAND: { id: 'wasteland', color: 0x7f4f24, accent: 0xe67e22, name: 'Old Wasteland', fogColor: 0xaf9164 },
+    MOUNTAINS: { id: 'mountains', color: 0x636e72, accent: 0xbdc3c7, name: 'Iron Peaks', fogColor: 0x95a5a6 },
+    SWAMP: { id: 'swamp', color: 0x1e272e, accent: 0x16a085, name: 'Murky Waters', fogColor: 0x00b894 },
+    VILLAGE: { id: 'village', color: 0x57606f, accent: 0xf1c40f, name: 'Highland Outpost', fogColor: 0xffffff }
 };
 
 export const RACES = {

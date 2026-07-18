@@ -11,20 +11,20 @@ export class BuildingTemplates {
             tex[name] = app.renderer.generateTexture(g);
         };
 
-        draw('wall_wood', g => {
-            g.beginFill(0x5d4037).drawRect(0, 0, s, s);
-            g.beginFill(0x3e2723).drawRect(0, s-4, s, 4);
-            g.beginFill(0x000000, 0.1).drawRect(s-2, 0, 2, s);
+        draw('wall_stone_dark', g => {
+            g.beginFill(0x424242).drawRect(0, 0, s, s);
+            g.beginFill(0x212121).drawRect(0, s-4, s, 4).drawRect(0,0,2,32);
         });
         
-        draw('roof_main', g => {
-            g.beginFill(0x7f0000).drawRect(0, 0, s, s);
-            g.beginFill(0xb71c1c).drawRect(0, 0, s, 4).drawRect(0, 14, s, 2);
+        draw('roof_slate_dark', g => {
+            g.beginFill(0x263238).drawRect(0, 0, s, s);
+            g.beginFill(0x37474f).drawRect(0, 0, s, 4);
+            g.lineStyle(1, 0x1a1a1a).moveTo(0,16).lineTo(32,16);
         });
 
-        draw('floor_tavern', g => {
-            g.beginFill(0x4e342e).drawRect(0, 0, s, s);
-            g.beginFill(0x3e2723, 0.3).drawRect(0, 0, s, 1).drawRect(0, 0, 1, s);
+        draw('floor_royal', g => {
+            g.beginFill(0x5d4037).drawRect(0, 0, s, s);
+            g.beginFill(0xffeb3b, 0.1).drawRect(0, 0, s, 1).drawRect(0, 0, 1, s);
         });
 
         return tex;
@@ -32,19 +32,42 @@ export class BuildingTemplates {
 
     static getHouseSchema(type) {
         const schemas = {
-            'hut': [
-                {x:0, y:0, l:'f', t:'floor_tavern'}, {x:1, y:0, l:'f', t:'floor_tavern'},
-                {x:0, y:0, l:'w', t:'wall_wood'}, {x:1, y:0, l:'w', t:'wall_wood'},
-                {x:0, y:0, l:'r', t:'roof_main'}, {x:1, y:0, l:'r', t:'roof_main'}
+            'alchemist_shop': [
+                // Floor 4x4
+                {x:0,y:0,l:'f',t:'floor_royal'}, {x:1,y:0,l:'f',t:'floor_royal'}, {x:2,y:0,l:'f',t:'floor_royal'}, {x:3,y:0,l:'f',t:'floor_royal'},
+                {x:0,y:1,l:'f',t:'floor_royal'}, {x:1,y:1,l:'f',t:'floor_royal'}, {x:2,y:1,l:'f',t:'floor_royal'}, {x:3,y:1,l:'f',t:'floor_royal'},
+                {x:0,y:2,l:'f',t:'floor_royal'}, {x:1,y:2,l:'f',t:'floor_royal'}, {x:2,y:2,l:'f',t:'floor_royal'}, {x:3,y:2,l:'f',t:'floor_royal'},
+                {x:0,y:3,l:'f',t:'floor_royal'}, {x:1,y:3,l:'f',t:'floor_royal'}, {x:2,y:3,l:'f',t:'floor_royal'}, {x:3,y:3,l:'f',t:'floor_royal'},
+                // Walls
+                {x:0,y:0,l:'w',t:'wall_stone_dark'}, {x:1,y:0,l:'w',t:'wall_stone_dark'}, {x:2,y:0,l:'w',t:'wall_stone_dark'}, {x:3,y:0,l:'w',t:'wall_stone_dark'},
+                // Interior
+                {x:0,y:1,l:'d',t:'int_bookshelf'}, {x:3,y:1,l:'d',t:'int_alchemy_table'},
+                {x:1,y:1,l:'d',t:'int_carpet_red'}, {x:2,y:1,l:'d',t:'int_carpet_red'},
+                // Roof
+                {x:0,y:0,l:'r',t:'roof_slate_dark'}, {x:1,y:0,l:'r',t:'roof_slate_dark'}, {x:2,y:0,l:'r',t:'roof_slate_dark'}, {x:3,y:0,l:'r',t:'roof_slate_dark'},
+                {x:0,y:1,l:'r',t:'roof_slate_dark'}, {x:1,y:1,l:'r',t:'roof_slate_dark'}, {x:2,y:1,l:'r',t:'roof_slate_dark'}, {x:3,y:1,l:'r',t:'roof_slate_dark'},
+                {x:0,y:2,l:'r',t:'roof_slate_dark'}, {x:1,y:2,l:'r',t:'roof_slate_dark'}, {x:2,y:2,l:'r',t:'roof_slate_dark'}, {x:3,y:2,l:'r',t:'roof_slate_dark'}
             ],
-            'tavern': [
-                {x:0, y:0, l:'f', t:'floor_tavern'}, {x:1, y:0, l:'f', t:'floor_tavern'}, {x:2, y:0, l:'f', t:'floor_tavern'},
-                {x:0, y:1, l:'f', t:'floor_tavern'}, {x:1, y:1, l:'f', t:'floor_tavern'}, {x:2, y:1, l:'f', t:'floor_tavern'},
-                {x:0, y:0, l:'w', t:'wall_wood'}, {x:1, y:0, l:'w', t:'wall_wood'}, {x:2, y:0, l:'w', t:'wall_wood'},
-                {x:0, y:0, l:'r', t:'roof_main'}, {x:1, y:0, l:'r', t:'roof_main'}, {x:2, y:0, l:'r', t:'roof_main'},
-                {x:0, y:1, l:'d', t:'tavern_bar_counter'}, {x:2, y:1, l:'d', t:'tavern_mug'}
+            'town_hall': [
+                // Massive 6x6 Structure
+                {x:0,y:0,l:'f',t:'floor_royal'}, {x:5,y:5,l:'f',t:'floor_royal'}, // ... (упрощенно для примера, заполняем через цикл в коде ниже)
+                {x:0,y:0,l:'w',t:'wall_stone_dark'}, {x:5,y:0,l:'w',t:'wall_stone_dark'},
+                {x:2,y:0,l:'d',t:'int_fireplace', anim: true},
+                {x:1,y:0,l:'r',t:'roof_slate_dark'}, {x:2,y:0,l:'r',t:'roof_slate_dark'}, {x:3,y:0,l:'r',t:'roof_slate_dark'}, {x:4,y:0,l:'r',t:'roof_slate_dark'}
             ]
         };
-        return schemas[type] || schemas.hut;
+        
+        // Автоматическое заполнение пола для больших зданий
+        if(type === 'town_hall' && schemas[type].length < 10) {
+            for(let ix=0; ix<6; ix++) {
+                for(let iy=0; iy<6; iy++) {
+                    schemas[type].push({x:ix, y:iy, l:'f', t:'floor_royal'});
+                    if(iy === 0) schemas[type].push({x:ix, y:iy, l:'w', t:'wall_stone_dark'});
+                    if(iy < 5) schemas[type].push({x:ix, y:iy, l:'r', t:'roof_slate_dark'});
+                }
+            }
+        }
+
+        return schemas[type] || schemas.alchemist_shop;
     }
 }

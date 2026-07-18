@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project: NEON-GEAR | Sandbox MMORPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'JetBrains Mono', monospace; }
+        canvas { display: block; }
+        .neon-border { border: 1px solid #00f2ff; box-shadow: 0 0 10px rgba(0, 242, 255, 0.5); }
+        .glitch-text { text-shadow: 2px 0 #ff00ff, -2px 0 #00f2ff; }
+        #ui-layer { pointer-events: none; }
+        #ui-layer * { pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    
+    <!-- HUD Overlay -->
+    <div id="ui-layer" class="fixed inset-0 z-10 flex flex-col justify-between p-6">
+        <header class="flex justify-between items-start">
+            <div class="neon-border bg-black/80 p-4 backdrop-blur-md">
+                <h1 class="text-xl font-bold text-cyan-400 font-['Orbitron'] tracking-widest">PROJECT: NEON-GEAR</h1>
+                <div class="text-[10px] text-cyan-700 uppercase">Sector: 7-G | Latency: 24ms</div>
+            </div>
+            <div id="coords" class="text-cyan-400 bg-black/60 p-2 text-xs">X: 0 Y: 0</div>
+        </header>
+
+        <footer class="flex justify-center gap-4">
+            <nav class="neon-border bg-black/80 p-2 flex gap-2 backdrop-blur-md">
+                <button class="px-4 py-2 bg-cyan-900/30 hover:bg-cyan-500/50 text-cyan-400 transition-all">INVENTORY</button>
+                <button class="px-4 py-2 bg-cyan-900/30 hover:bg-cyan-500/50 text-cyan-400 transition-all">BLUEPRINTS</button>
+                <button class="px-4 py-2 bg-cyan-900/30 hover:bg-cyan-500/50 text-cyan-400 transition-all">SYSTEM</button>
+            </nav>
+        </footer>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>

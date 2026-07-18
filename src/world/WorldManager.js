@@ -9,7 +9,7 @@ import { CONFIG, BIOMES } from '../core/Constants.js';
 export class WorldManager {
     constructor(app) {
         this.app = app;
-        this.cameraPos = { x: 500000 * 32, y: 500000 * 32 };
+        this.cameraPos = { x: CONFIG.KINGDOM_CENTER * 32, y: CONFIG.KINGDOM_CENTER * 32 };
         this.loadedChunks = new Map();
         window.BIOMES_REF = BIOMES;
         
@@ -87,7 +87,7 @@ export class WorldManager {
             d.timer -= dt;
             if (d.timer <= 0) {
                 d.state = Math.random() > 0.6 ? 'walking' : 'idle';
-                d.timer = 3 + Math.random() * 5;
+                d.timer = 4 + Math.random() * 6;
                 d.vx = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
                 d.vy = d.state === 'walking' ? (Math.random() - 0.5) * 30 : 0;
             }
@@ -102,7 +102,7 @@ export class WorldManager {
     createChunk(cx, cy) {
         const floor = new PIXI.Container();
         const roofs = new PIXI.Container();
-        const chunkObjs = [];
+        const worldObjects = [];
         const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
         floor.position.set(cx * chunkPx, cy * chunkPx);
         roofs.position.set(cx * chunkPx, cy * chunkPx);
@@ -113,7 +113,7 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`]);
+                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.biome.id}`]);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
@@ -133,12 +133,21 @@ export class WorldManager {
                             s.position.set(wx, wy); s.zIndex = wy + 16;
                             if(p.anim) { s.animationSpeed=0.1; s.play(); }
                             this.layers.WORLD_OBJECTS.addChild(s);
-                            chunkObjs.push(s);
+                            worldObjects.push(s);
                         }
                     });
+
+                    // Спавн NPC Стражников у Цитадели
+                    if (data.biome.id === 'citadel' && gx % 8 === 0) {
+                        const guard = NPCFactory.createNPC(this.app, 'knight', '#ecf0f1');
+                        guard.position.set(gx * 32 + 16, gy * 32 + 48);
+                        this.layers.WORLD_OBJECTS.addChild(guard);
+                        this.npcs.push(guard);
+                        worldObjects.push(guard);
+                    }
                 }
 
-                if (data.deco) {
+                if (data.deco && !data.structure) {
                     const tex = this.envTextures[data.deco];
                     const obj = Array.isArray(tex) ? new PIXI.AnimatedSprite(tex) : new PIXI.Sprite(tex);
                     obj.anchor.set(0.5, 0.95);
@@ -146,21 +155,21 @@ export class WorldManager {
                     obj.zIndex = obj.y;
                     if (Array.isArray(tex)) { obj.animationSpeed = 0.1; obj.play(); }
                     this.layers.WORLD_OBJECTS.addChild(obj);
-                    chunkObjs.push(obj);
+                    worldObjects.push(obj);
                 }
 
-                if (data.npc) {
+                if (data.npc && !data.structure) {
                     const npc = NPCFactory.createNPC(this.app, data.npc, '#ffffff');
                     npc.position.set(gx * 32 + 16, gy * 32 + 16);
                     this.layers.WORLD_OBJECTS.addChild(npc);
                     this.npcs.push(npc);
-                    chunkObjs.push(npc);
+                    worldObjects.push(npc);
                 }
             }
         }
         this.layers.FLOOR.addChild(floor);
         this.layers.STRUCTURE_ROOF.addChild(roofs);
-        this.loadedChunks.set(`${cx},${cy}`, { floor, roofs, chunkObjs });
+        this.loadedChunks.set(`${cx},${cy}`, { floor, roofs, worldObjects });
     }
 
     manageChunks() {
@@ -179,7 +188,7 @@ export class WorldManager {
                 if (Math.abs(cx - curX) > 2 || Math.abs(cy - curY) > 2) {
                     chunk.floor.destroy({ children: true });
                     chunk.roofs.destroy({ children: true });
-                    chunk.chunkObjs.forEach(obj => {
+                    chunk.worldObjects.forEach(obj => {
                         const idx = this.npcs.indexOf(obj);
                         if(idx > -1) this.npcs.splice(idx, 1);
                         obj.destroy();
@@ -195,7 +204,7 @@ export class WorldManager {
         const py = Math.floor(this.cameraPos.y / 32);
         this.layers.STRUCTURE_ROOF.children.forEach(c => c.children.forEach(r => {
             const dx = r.userData.gx - px, dy = r.userData.gy - py;
-            r.alpha = (dx*dx + dy*dy < 16) ? 0.25 : 1.0;
+            r.alpha = (dx*dx + dy*dy < 12) ? 0.3 : 1.0;
         }));
     }
 

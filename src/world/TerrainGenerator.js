@@ -7,70 +7,56 @@ export class TerrainGenerator {
         this.seed = seed;
         this.noises = {
             height: new Noise(seed),
-            moisture: new Noise(seed + 101),
-            roads: new Noise(seed + 202),
-            objects: new Noise(seed + 303),
-            fort: new Noise(seed + 404)
+            roads: new Noise(seed + 10),
+            objects: new Noise(seed + 20)
         };
-        this.centerX = 500000;
-        this.centerY = 500000;
-    }
-
-    getFractalNoise(noise, x, y, oct = 4) {
-        let t = 0, f = 0.005, a = 1, max = 0;
-        for (let i = 0; i < oct; i++) {
-            t += noise.perlin(x * f, y * f) * a;
-            max += a; a *= 0.5; f *= 2;
-        }
-        return (t / max + 1) / 2;
+        this.centerX = CONFIG.KINGDOM_CENTER;
+        this.centerY = CONFIG.KINGDOM_CENTER;
     }
 
     getTileData(gx, gy) {
-        // 1. География
-        const h = this.getFractalNoise(this.noises.height, gx, gy, 6);
-        const m = this.getFractalNoise(this.noises.moisture, gx, gy, 3);
-        const dist = Math.sqrt(Math.pow((gx-this.centerX)/2500, 2) + Math.pow((gy-this.centerY)/2500, 2));
-        let elevation = h * Math.max(0, 1.1 - dist);
+        const dx = gx - this.centerX;
+        const dy = gy - this.centerY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
 
-        // 2. Дороги
-        const roadVal = Math.abs(this.noises.roads.perlin(gx*0.015, gy*0.015));
-        const isRoad = roadVal < 0.032 && elevation > 0.28;
+        // 1. Определение зоны (Зонирование Королевства)
+        let biome = BIOMES.WILDERNESS;
+        if (dist < 80) biome = BIOMES.CITADEL;
+        else if (dist < 250) biome = BIOMES.HIGH_CITY;
+        else if (dist < 500) biome = BIOMES.SUBURBS;
+        else if (dist < 800) biome = BIOMES.FARMLAND;
 
-        // 3. Биомы
-        let biome = BIOMES.OCEAN;
-        if (elevation > 0.28) {
-            if (elevation < 0.31) biome = BIOMES.BEACH;
-            else if (elevation > 0.75) biome = BIOMES.TAIGA;
-            else biome = m > 0.5 ? BIOMES.FOREST : BIOMES.PLAINS;
+        // 2. Королевские тракты (Дороги)
+        const roadVal = Math.abs(this.noises.roads.perlin(gx * 0.02, gy * 0.02));
+        const isRoad = roadVal < 0.04 && dist > 30; // Дороги начинаются за пределами дворца
+        if (isRoad) biome = BIOMES.ROAD;
+
+        // 3. Структурная логика (Размещение без хаоса)
+        let structure = null, deco = null, npc = null;
+        const objVal = (this.noises.objects.perlin(gx * 0.5, gy * 0.5) + 1) / 2;
+
+        if (biome.id === 'citadel') {
+            if (gx === this.centerX - 5 && gy === this.centerY - 5) structure = 'castle_keep';
+            else if (dist > 75 && dist < 78 && gx % 8 === 0) structure = 'watchtower';
+        } 
+        else if (biome.id === 'high_city' && !isRoad) {
+            if (gx % 16 === 0 && gy % 16 === 0) structure = 'noble_house';
+            else if (objVal > 0.8) deco = 'garden_statue';
+        }
+        else if (biome.id === 'suburbs' && !isRoad) {
+            if (gx % 12 === 0 && gy % 12 === 0) structure = 'city_shop';
+            else if (objVal > 0.7) deco = 'market_cart';
+        }
+        else if (biome.id === 'farmland' && !isRoad) {
+            if (gx % 20 === 0 && gy % 20 === 0) structure = 'peasant_hut';
+            else if (objVal > 0.6) deco = 'village_haystack';
+            if (objVal < 0.05) npc = 'cow';
+        }
+        else if (biome.id === 'wild' && objVal > 0.9) {
+            deco = 'nature_oak';
+            if (objVal > 0.98) npc = 'deer';
         }
 
-        const distTiles = Math.sqrt(Math.pow(gx-this.centerX, 2) + Math.pow(gy-this.centerY, 2));
-        if (distTiles < 150) biome = BIOMES.VILLAGE;
-
-        // 4. Глобальный маппинг структур (ПОСЕЛЕНИЯ И ФОРТЫ)
-        let structure = null, deco = null, npc = null, isAnimated = false;
-        const objN = (this.noises.objects.perlin(gx*0.4, gy*0.4) + 1) / 2;
-
-        if (biome.id === 'village') {
-            // Центр - Цитадель
-            if (gx === this.centerX && gy === this.centerY) structure = 'royal_keep';
-            // Сторожевые башни по периметру
-            else if (Math.abs(distTiles - 100) < 2 && gx % 40 === 0) structure = 'watchtower';
-            // Жилые кварталы вдоль дорог
-            else if (isRoad && gx % 16 === 0 && gy % 16 === 0 && distTiles > 30) {
-                const typeRand = Math.abs(gx * gy) % 100;
-                structure = typeRand < 70 ? 'peasant_hut' : 'blacksmith';
-            }
-            // Фортификация (Частокол)
-            else if (Math.abs(distTiles - 110) < 1 && !isRoad) deco = 'fort_palisade';
-        } else {
-            // Дикая природа
-            if (objN > 0.9 && !isRoad) {
-                if (biome.id === 'forest') deco = 'nature_oak';
-                else if (biome.id === 'plains' && objN > 0.98) npc = 'deer';
-            }
-        }
-
-        return { biome, isRoad, structure, deco, npc, isAnimated };
+        return { biome, isRoad, structure, deco, npc };
     }
 }

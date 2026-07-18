@@ -3,26 +3,25 @@ export const CONFIG = {
     TILE_SIZE: 32,
     CHUNK_SIZE: 16,
     WORLD_SIZE: 1000000,
-    VILLAGE_RADIUS: 150,
-    SEA_LEVEL: 0.28,
+    KINGDOM_CENTER: 500000,
     LAYERS: {
-        FLOOR: 0,           // Земля, песок, вода
-        SHADOWS: 1,         // Тени под всеми объектами
-        WORLD_OBJECTS: 2,   // Игрок, NPC, Деревья, Мебель (Y-Sorted)
-        STRUCTURE_ROOF: 3,  // Крыши домов (Alpha-faded)
-        UI_OVERLAY: 4       // HUD
+        FLOOR: 0,
+        STRUCTURE_BASE: 1,
+        DECOR: 2,
+        PLAYER: 3,
+        STRUCTURE_ROOF: 4,
+        VFX: 5,
+        UI_OVERLAY: 6
     }
 };
 
 export const BIOMES = {
-    OCEAN: { id: 'ocean', color: 0x1a3a5a, accent: 0x0a1931, name: 'Океан' },
-    BEACH: { id: 'beach', color: 0xd4af37, accent: 0xc49a27, name: 'Пляж' },
-    FOREST: { id: 'forest', color: 0x2d4a2d, accent: 0x1e3a1a, name: 'Вековой Лес' },
-    PLAINS: { id: 'plains', color: 0x588157, accent: 0x3a5a40, name: 'Равнины' },
-    TAIGA: { id: 'taiga', color: 0x3d4147, accent: 0x2c3e50, name: 'Тайга' },
-    FARMLAND: { id: 'farmland', color: 0x5d4037, accent: 0x3e2723, name: 'Пашни' },
-    VILLAGE: { id: 'village', color: 0x4a4e52, accent: 0x2f3542, name: 'Поселение' },
-    ROAD: { id: 'road', color: 0x3d3126, accent: 0x2d1b0d, name: 'Тракт' }
+    CITADEL: { id: 'citadel', color: 0xecf0f1, accent: 0xf1c40f, name: 'Цитадель' },
+    HIGH_CITY: { id: 'high_city', color: 0x95a5a6, accent: 0x7f8c8d, name: 'Верхний Город' },
+    SUBURBS: { id: 'suburbs', color: 0x7f8c8d, accent: 0x2c3e50, name: 'Предместья' },
+    FARMLAND: { id: 'farmland', color: 0x8b4513, accent: 0x5d4037, name: 'Угодья' },
+    WILDERNESS: { id: 'wild', color: 0x27ae60, accent: 0x1e3a1a, name: 'Дикие Земли' },
+    ROAD: { id: 'road', color: 0x34495e, accent: 0x2c3e50, name: 'Королевский Тракт' }
 };
 
 export const RACES = {

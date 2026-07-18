@@ -7,10 +7,10 @@ export class CharacterCreator {
         this.pointsPool = 20;
         this.stats = { str: 0, dex: 0, int: 0, tec: 0 };
         this.statNames = {
-            str: 'Сила (Урон и Вес)',
-            dex: 'Ловкость (Скорость)',
-            int: 'Интеллект (Магия)',
-            tec: 'Ремесло (Инженерия)'
+            str: 'Сила',
+            dex: 'Ловкость',
+            int: 'Интеллект',
+            tec: 'Ремесло'
         };
 
         this.elements = {
@@ -49,8 +49,7 @@ export class CharacterCreator {
             div.className = 'flex items-center justify-between';
             div.innerHTML = `
                 <div>
-                    <div class="text-yellow-600 uppercase font-bold text-lg">${key.toUpperCase()}</div>
-                    <div class="text-xs text-gray-400 uppercase">${label}</div>
+                    <div class="text-yellow-600 uppercase font-bold text-lg">${label}</div>
                 </div>
                 <div class="flex items-center gap-6">
                     <button class="stat-btn rpg-button w-10 h-10 text-xl" data-key="${key}" data-mod="-1">-</button>
@@ -80,11 +79,13 @@ export class CharacterCreator {
     }
 
     finish() {
+        const raceKey = this.elements.race.value; // HUMAN, DWARVEN etc.
         const charData = {
             name: this.elements.name.value || "Странник",
-            race: RACES[this.elements.race.value].name,
+            raceId: raceKey,
+            race: RACES[raceKey].name,
             color: this.elements.color.value,
-            stats: { ...RACES[this.elements.race.value].stats }
+            stats: { ...RACES[raceKey].stats }
         };
         Object.keys(this.stats).forEach(k => charData.stats[k] += this.stats[k]);
         this.elements.overlay.classList.add('hidden');

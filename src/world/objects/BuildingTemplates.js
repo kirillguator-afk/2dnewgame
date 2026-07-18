@@ -1,30 +1,5 @@
 
 export class BuildingTemplates {
-    static getTemplates(app) {
-        const tex = {};
-        const g = new PIXI.Graphics();
-        const s = 32;
-
-        const draw = (name, fn) => {
-            g.clear();
-            fn(g);
-            tex[name] = app.renderer.generateTexture(g);
-        };
-
-        draw('wall_citadel', g => g.beginFill(0xd1d8e0).drawRect(0, 0, s, s).beginFill(0xa5b1c2).drawRect(0, s-4, s, 4));
-        draw('wall_timber', g => g.beginFill(0xf5f6fa).drawRect(0, 0, s, s).beginFill(0x3e2723).drawRect(0, 0, 4, s).drawRect(28, 0, 4, s));
-        draw('wall_stone_dark', g => g.beginFill(0x4b4b4b).drawRect(0, 0, s, s).beginFill(0x2d3436).drawRect(0, s-4, s, 4));
-        
-        draw('roof_citadel', g => g.beginFill(0x2f3640).drawRect(0, 0, s, s).beginFill(0x1e272e).drawPolygon([0,0, s,0, s/2,s/2]));
-        draw('roof_tile_red', g => g.beginFill(0xb71c1c).drawRect(0, 0, s, s).beginFill(0x7f0000).drawRect(0, 14, s, 4));
-        draw('roof_thatch', g => g.beginFill(0xd4af37).drawRect(0, 0, s, s));
-
-        draw('floor_marble', g => g.beginFill(0xffffff).drawRect(0, 0, s, s).beginFill(0xd1d8e0, 0.3).drawRect(1, 1, 30, 30));
-        draw('floor_planks', g => g.beginFill(0x8d6e63).drawRect(0, 0, s, s).beginFill(0x6d4c41).drawRect(0, 0, s, 2));
-
-        return tex;
-    }
-
     static getHouseSchema(type) {
         const h = {
             'castle_keep': [],
@@ -61,5 +36,9 @@ export class BuildingTemplates {
         }
 
         return h[type] || h.peasant_hut;
+    }
+
+    static getTemplates() {
+        return {}; // Метод для совместимости, основные данные в getHouseSchema
     }
 }

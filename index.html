@@ -4,30 +4,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project: NEON-GEAR | Syndicate-Prime</title>
+    <title>NEON-GEAR: Ancient Tech</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #020202; font-family: 'JetBrains Mono', monospace; }
-        .neon-panel { 
-            background: rgba(0, 20, 30, 0.85);
-            border: 1px solid rgba(0, 242, 255, 0.3);
-            box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.1), 0 0 20px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
+        body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: 'Crimson Pro', serif; image-rendering: pixelated; }
+        canvas { display: block; image-rendering: pixelated; }
+        
+        /* RPG Style Panels */
+        .rpg-panel { 
+            background: #2f3640;
+            border: 4px solid #191c21;
+            box-shadow: inset -4px -4px 0px #1e272e, inset 4px 4px 0px #57606f;
+            color: #f5f6fa;
         }
+        
+        .rpg-button {
+            background: #dcdde1;
+            border: 2px solid #2f3640;
+            box-shadow: 2px 2px 0px #000;
+            color: #2f3640;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.1s;
+        }
+        
+        .rpg-button:active {
+            box-shadow: 0px 0px 0px #000;
+            transform: translate(2px, 2px);
+        }
+
         .stat-bar {
-            height: 4px;
-            background: rgba(0, 242, 255, 0.1);
-            position: relative;
-            overflow: hidden;
+            height: 12px;
+            background: #000;
+            border: 2px solid #57606f;
         }
+        
         .stat-bar-fill {
-            position: absolute;
             height: 100%;
-            background: #00f2ff;
-            box-shadow: 0 0 10px #00f2ff;
+            background: #c0392b;
             transition: width 0.3s ease;
+        }
+
+        input, select {
+            background: #1e272e !important;
+            border: 2px solid #57606f !important;
+            color: #f5f6fa !important;
+            padding: 8px;
         }
     </style>
 </head>
@@ -35,28 +59,39 @@
     <div id="game-container"></div>
 
     <!-- Character Creator -->
-    <div id="creator-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-        <div class="neon-panel w-full max-w-4xl p-8 rounded-lg">
+    <div id="creator-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div class="rpg-panel w-full max-w-4xl p-8">
             <div class="flex flex-col md:flex-row gap-12">
                 <div class="flex-1 space-y-6">
-                    <h2 class="text-4xl font-bold font-['Orbitron'] text-cyan-400 italic tracking-tighter">NEON_GEAR</h2>
+                    <h2 class="text-4xl font-bold italic tracking-tight text-yellow-500">PROJECT: ANCIENT GEAR</h2>
                     <div class="space-y-4">
-                        <input id="char-name" type="text" placeholder="ID_IDENTIFIER" class="w-full bg-cyan-900/20 border border-cyan-500/50 p-4 text-cyan-400 outline-none">
-                        <select id="char-race" class="w-full bg-cyan-900/20 border border-cyan-500/50 p-4 text-cyan-400 outline-none">
-                            <option value="HUMAN">BIO_UNIT: HUMAN</option>
-                            <option value="ANDROID">SYNTH_UNIT: ANDROID</option>
-                            <option value="CYBORG">AUG_UNIT: CYBORG</option>
-                        </select>
-                        <input id="char-color" type="color" value="#00f2ff" class="w-full h-12 border-none bg-transparent">
+                        <div>
+                            <label class="text-xs uppercase text-gray-400">Character Name</label>
+                            <input id="char-name" type="text" placeholder="Adventurer" class="w-full outline-none mt-1">
+                        </div>
+                        <div>
+                            <label class="text-xs uppercase text-gray-400">Ancient Origin</label>
+                            <select id="char-race" class="w-full outline-none mt-1">
+                                <option value="HUMAN">Human Kingdom</option>
+                                <option value="DWARVEN">Iron Mountain Dwarf</option>
+                                <option value="ELVEN">Silver Leaf Elf</option>
+                                <option value="ORCISH">Blood Bone Orc</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs uppercase text-gray-400">Tunic Color</label>
+                            <input id="char-color" type="color" value="#c0392b" class="w-full h-12 border-none bg-transparent cursor-pointer">
+                        </div>
                     </div>
                 </div>
-                <div class="flex-1 space-y-6">
+                
+                <div class="flex-1 space-y-6 border-l border-gray-700 pl-8">
                     <div class="flex justify-between items-center">
-                        <span class="text-cyan-600 text-xs">ALLOCATION_POINTS</span>
-                        <span id="stat-points" class="text-2xl font-bold text-cyan-400">20</span>
+                        <span class="text-yellow-600 text-sm font-bold uppercase">Ability Points</span>
+                        <span id="stat-points" class="text-3xl font-bold">20</span>
                     </div>
-                    <div id="stat-container" class="space-y-6"></div>
-                    <button id="start-btn" class="w-full py-4 bg-cyan-500 text-black font-bold font-['Orbitron'] hover:bg-white transition-colors">BOOT_SEQUENCE()</button>
+                    <div id="stat-container" class="space-y-6"><!-- Stats --></div>
+                    <button id="start-btn" class="rpg-button w-full py-4 text-xl">Begin Adventure</button>
                 </div>
             </div>
         </div>
@@ -65,16 +100,16 @@
     <!-- HUD -->
     <div id="ui-layer" class="hidden fixed inset-0 pointer-events-none p-6 flex flex-col justify-between">
         <div class="flex justify-between items-start">
-            <div class="neon-panel p-4 w-64 pointer-events-auto">
-                <div id="hud-name" class="text-cyan-400 font-bold font-['Orbitron']">---</div>
+            <div class="rpg-panel p-4 w-64 pointer-events-auto">
+                <div id="hud-name" class="font-bold text-lg text-yellow-500">---</div>
                 <div class="stat-bar mt-2"><div class="stat-bar-fill" style="width: 100%"></div></div>
                 <div class="flex justify-between mt-1">
-                    <span class="text-[8px] text-cyan-700">HP_STABILITY</span>
-                    <span class="text-[8px] text-cyan-700">100%</span>
+                    <span class="text-[10px] uppercase font-bold">Vitality</span>
+                    <span id="hud-race-label" class="text-[10px] uppercase text-gray-400">Race: ---</span>
                 </div>
             </div>
-            <div class="neon-panel p-2 pointer-events-auto">
-                <div id="coords" class="text-cyan-500 text-[10px]">LOC: 0.0</div>
+            <div class="rpg-panel p-2 px-4 pointer-events-auto">
+                <div id="coords" class="text-xs font-mono">X: 0 Y: 0</div>
             </div>
         </div>
     </div>

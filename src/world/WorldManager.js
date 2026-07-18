@@ -12,87 +12,66 @@ export class WorldManager {
         this.loadedChunks = new Map();
         this.entities = new Map();
         
-        // Слои рендеринга
+        // Включаем пиксельный рендеринг
+        PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
+        
         this.worldContainer = new PIXI.Container();
-        this.lightingLayer = new PIXI.Container();
         this.vfxLayer = new PIXI.Container();
         
-        // Настройка освещения
-        this.darknessOverlay = new PIXI.Graphics();
-        this.darknessOverlay.beginFill(0x000000, 0.85);
-        this.darknessOverlay.drawRect(0, 0, window.innerWidth, window.innerHeight);
-        this.darknessOverlay.endFill();
-        
         this.app.stage.addChild(this.worldContainer);
-        this.app.stage.addChild(this.darknessOverlay);
-        this.app.stage.addChild(this.lightingLayer);
         this.app.stage.addChild(this.vfxLayer);
         
-        this.lightingLayer.blendMode = PIXI.BLEND_MODES.ADD;
-
-        this.generator = new TerrainGenerator(Math.random() * 99999);
+        this.generator = new TerrainGenerator(Date.now());
         this.kineticSystem = new KineticSystem();
         this.vfxSystem = new VfxSystem(this.app, this.vfxLayer);
         this.buildingSystem = new BuildingSystem(this);
         
-        this.moveSpeed = 400;
+        this.moveSpeed = 300;
         this.charData = null;
     }
 
     async loadResources() {
-        const createLightTexture = () => {
-            const size = 128;
-            const canvas = document.createElement('canvas');
-            canvas.width = size; canvas.height = size;
-            const ctx = canvas.getContext('2d');
-            const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-            grad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, size, size);
-            return PIXI.Texture.from(canvas);
-        };
-
-        const createTileTexture = (isRoad) => {
+        const createPixelTile = (color) => {
             const g = new PIXI.Graphics();
-            const size = CONFIG.TILE_SIZE;
-            g.beginFill(0xFFFFFF);
-            g.drawRect(0, 0, size, size);
-            // Добавляем микро-шум
-            for(let i=0; i<10; i++) {
-                g.beginFill(0x000000, 0.1);
-                g.drawRect(Math.random()*size, Math.random()*size, 2, 2);
+            const s = CONFIG.TILE_SIZE;
+            g.beginFill(color);
+            g.drawRect(0, 0, s, s);
+            // Пиксельная текстура (грязь/трава)
+            g.beginFill(0x000000, 0.05);
+            for(let i=0; i<4; i++) {
+                g.drawRect(Math.random()*(s-4), Math.random()*(s-4), 4, 4);
             }
             g.endFill();
             return this.app.renderer.generateTexture(g);
         };
 
+        const createGearTexture = (isWood) => {
+            const g = new PIXI.Graphics();
+            const s = CONFIG.TILE_SIZE;
+            const color = isWood ? 0x8e44ad : 0xd35400; // Цвета для отличия
+            g.beginFill(color);
+            g.drawRect(4, 4, s-8, s-8); // Квадратная "пиксельная" шестерня
+            g.beginFill(0x000000, 0.2);
+            g.drawRect(s/2-4, s/2-4, 8, 8);
+            g.endFill();
+            return this.app.renderer.generateTexture(g);
+        };
+
         this.textures = {
-            floor: createTileTexture(false),
-            light: createLightTexture(),
-            player: this.generateCircleTexture(0xffffff, 12),
-            gear: this.generateGearTexture(0x444444, false),
-            motor: this.generateGearTexture(0x00f2ff, true)
+            floor: createPixelTile(0xffffff),
+            player: this.generatePixelHero(0xffffff),
+            gear: createGearTexture(true),
+            engine: createGearTexture(false)
         };
     }
 
-    generateCircleTexture(color, radius) {
+    generatePixelHero(color) {
         const g = new PIXI.Graphics();
         g.beginFill(color);
-        g.drawCircle(radius, radius, radius);
-        g.endFill();
-        return this.app.renderer.generateTexture(g);
-    }
-
-    generateGearTexture(color, isMotor) {
-        const g = new PIXI.Graphics();
-        const size = CONFIG.TILE_SIZE;
-        g.beginFill(color);
-        g.drawCircle(size/2, size/2, size/2 - 4);
-        for(let i=0; i<8; i++) {
-            const angle = (i/8)*Math.PI*2;
-            g.drawRect(size/2 + Math.cos(angle)*(size/2-4)-2, size/2 + Math.sin(angle)*(size/2-4)-2, 4, 4);
-        }
+        g.drawRect(8, 4, 16, 24); // Тело
+        g.beginFill(0x000000, 0.3);
+        g.drawRect(10, 8, 4, 4); // Глаза
+        g.drawRect(18, 8, 4, 4);
         g.endFill();
         return this.app.renderer.generateTexture(g);
     }
@@ -105,47 +84,35 @@ export class WorldManager {
         this.player.x = window.innerWidth / 2;
         this.player.y = window.innerHeight / 2;
         this.player.tint = PIXI.utils.string2hex(charData.color);
-
-        // Фонарик игрока
-        this.playerLight = new PIXI.Sprite(this.textures.light);
-        this.playerLight.anchor.set(0.5);
-        this.playerLight.scale.set(2.0);
-        this.playerLight.tint = this.player.tint;
-        this.lightingLayer.addChild(this.playerLight);
         
-        this.moveSpeed = 300 + (charData.stats.dex * 20);
+        this.moveSpeed = 250 + (charData.stats.dex * 15);
         this.buildingSystem.setup();
     }
 
     update(dt, input) {
         if (!this.player) return;
 
-        // Движение
-        const oldX = this.cameraPos.x;
-        const oldY = this.cameraPos.y;
-
         if (input.isKeyDown('KeyW')) this.cameraPos.y -= this.moveSpeed * dt;
         if (input.isKeyDown('KeyS')) this.cameraPos.y += this.moveSpeed * dt;
-        if (input.isKeyDown('KeyA')) this.cameraPos.x -= this.moveSpeed * dt;
-        if (input.isKeyDown('KeyD')) this.cameraPos.x += this.moveSpeed * dt;
-
-        // Эффекты при движении (пыль)
-        if (Math.abs(oldX - this.cameraPos.x) > 1 || Math.abs(oldY - this.cameraPos.y) > 1) {
-            if (Math.random() > 0.7) {
-                this.vfxSystem.spawn(window.innerWidth/2 + (Math.random()-0.5)*20, 
-                                     window.innerHeight/2 + 10, 
-                                     'dust', 0x333333);
-            }
+        if (input.isKeyDown('KeyA')) { 
+            this.cameraPos.x -= this.moveSpeed * dt;
+            this.player.scale.x = -1;
+        }
+        if (input.isKeyDown('KeyD')) {
+            this.cameraPos.x += this.moveSpeed * dt;
+            this.player.scale.x = 1;
         }
 
         this.buildingSystem.handleInput(input, this.cameraPos);
         this.kineticSystem.update(dt);
         this.vfxSystem.update(dt);
         
-        // Обновление света игрока
-        this.playerLight.x = this.player.x;
-        this.playerLight.y = this.player.y;
-        this.playerLight.alpha = 0.8 + Math.sin(Date.now()*0.01)*0.05; // Мерцание
+        for (const [id, ent] of this.entities) {
+            const kinetic = this.kineticSystem.getKineticData(id);
+            if (kinetic && kinetic.rpm !== 0) {
+                ent.sprite.rotation += (kinetic.rpm * Math.PI * 2 / 60) * dt;
+            }
+        }
 
         this.manageChunks();
         this.renderChunks();
@@ -166,13 +133,9 @@ export class WorldManager {
 
     createChunk(cx, cy) {
         const container = new PIXI.Container();
-        const lightContainer = new PIXI.Container();
         const chunkTotalPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
-        
         container.x = cx * chunkTotalPx;
         container.y = cy * chunkTotalPx;
-        lightContainer.x = container.x;
-        lightContainer.y = container.y;
 
         for (let ty = 0; ty < CONFIG.CHUNK_SIZE; ty++) {
             for (let tx = 0; tx < CONFIG.CHUNK_SIZE; tx++) {
@@ -183,40 +146,21 @@ export class WorldManager {
                 const tile = new PIXI.Sprite(this.textures.floor);
                 tile.x = tx * CONFIG.TILE_SIZE;
                 tile.y = ty * CONFIG.TILE_SIZE;
-                tile.tint = data.isRoad ? 0x222225 : data.biome.color;
+                tile.tint = data.isRoad ? 0x57606f : data.biome.color;
                 container.addChild(tile);
-
-                // Добавляем редкие светящиеся элементы (техно-детали)
-                if (data.variation > 8) {
-                    const l = new PIXI.Sprite(this.textures.light);
-                    l.anchor.set(0.5);
-                    l.x = tile.x + 16;
-                    l.y = tile.y + 16;
-                    l.scale.set(0.4);
-                    l.tint = data.biome.accent;
-                    lightContainer.addChild(l);
-                }
             }
         }
 
         this.worldContainer.addChildAt(container, 0);
-        this.lightingLayer.addChild(lightContainer);
-        this.loadedChunks.set(`${cx},${cy}`, { container, lightContainer });
+        this.loadedChunks.set(`${cx},${cy}`, container);
     }
 
     renderChunks() {
         const ox = -this.cameraPos.x + window.innerWidth / 2;
         const oy = -this.cameraPos.y + window.innerHeight / 2;
-        
-        this.worldContainer.x = ox;
-        this.worldContainer.y = oy;
-        this.lightingLayer.x = ox;
-        this.lightingLayer.y = oy;
-        this.vfxLayer.x = ox;
-        this.vfxLayer.y = oy;
-        
-        // Обновляем оверлей тьмы под размер экрана
-        this.darknessOverlay.width = window.innerWidth;
-        this.darknessOverlay.height = window.innerHeight;
+        this.worldContainer.x = Math.round(ox); // Округление для избежания дрожания пикселей
+        this.worldContainer.y = Math.round(oy);
+        this.vfxLayer.x = this.worldContainer.x;
+        this.vfxLayer.y = this.worldContainer.y;
     }
 }

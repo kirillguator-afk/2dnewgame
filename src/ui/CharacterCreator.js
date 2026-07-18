@@ -7,10 +7,10 @@ export class CharacterCreator {
         this.pointsPool = 20;
         this.stats = { str: 0, dex: 0, int: 0, tec: 0 };
         this.statNames = {
-            str: 'Strength (Combat & Load)',
-            dex: 'Dexterity (Speed & Piloting)',
-            int: 'Intelligence (Hacking & Research)',
-            tec: 'Technical (Mechanics & Energy)'
+            str: 'Might (Strength)',
+            dex: 'Swiftness (Speed)',
+            int: 'Wisdom (Magic)',
+            tec: 'Crafting (Mechanics)'
         };
 
         this.elements = {
@@ -29,16 +29,13 @@ export class CharacterCreator {
 
     init() {
         this.renderStats();
-        
         this.elements.startBtn.addEventListener('click', () => {
-            if (this.elements.name.value.length < 3) {
-                alert("Neural link name too short (min 3 characters)");
+            if (this.elements.name.value.length < 2) {
+                alert("Enter your name, adventurer!");
                 return;
             }
             this.finish();
         });
-
-        // Слушатель смены расы для авто-коррекции
         this.elements.race.addEventListener('change', () => this.renderStats());
     }
 
@@ -51,20 +48,19 @@ export class CharacterCreator {
             const div = document.createElement('div');
             div.className = 'flex items-center justify-between';
             div.innerHTML = `
-                <div class="text-xs">
-                    <div class="text-cyan-500 uppercase font-bold">${key}</div>
-                    <div class="text-[10px] text-cyan-800">${label}</div>
+                <div>
+                    <div class="text-yellow-600 uppercase font-bold text-sm">${key}</div>
+                    <div class="text-[10px] text-gray-500 uppercase">${label}</div>
                 </div>
-                <div class="flex items-center gap-3">
-                    <button class="stat-btn w-6 h-6 border border-cyan-500/50 hover:bg-cyan-500/30 text-cyan-400" data-key="${key}" data-mod="-1">-</button>
-                    <span class="w-8 text-center text-cyan-400 font-bold">${baseValue + this.stats[key]}</span>
-                    <button class="stat-btn w-6 h-6 border border-cyan-500/50 hover:bg-cyan-500/30 text-cyan-400" data-key="${key}" data-mod="1">+</button>
+                <div class="flex items-center gap-4">
+                    <button class="stat-btn rpg-button w-8 h-8" data-key="${key}" data-mod="-1">-</button>
+                    <span class="w-8 text-center text-xl font-bold">${baseValue + this.stats[key]}</span>
+                    <button class="stat-btn rpg-button w-8 h-8" data-key="${key}" data-mod="1">+</button>
                 </div>
             `;
             this.elements.container.appendChild(div);
         });
 
-        // Навешиваем события на кнопки
         this.elements.container.querySelectorAll('.stat-btn').forEach(btn => {
             btn.onclick = () => this.modifyStat(btn.dataset.key, parseInt(btn.dataset.mod));
         });
@@ -85,20 +81,14 @@ export class CharacterCreator {
 
     finish() {
         const charData = {
-            name: this.elements.name.value || "Anonymous_Diver",
+            name: this.elements.name.value || "Traveler",
             race: this.elements.race.value,
             color: this.elements.color.value,
             stats: { ...RACES[this.elements.race.value].stats }
         };
-
-        // Добавляем распределенные очки к базовым статам
         Object.keys(this.stats).forEach(k => charData.stats[k] += this.stats[k]);
-
-        // Прячем меню
         this.elements.overlay.classList.add('hidden');
         this.elements.hud.classList.remove('hidden');
-
-        // Вызываем коллбэк в Engine
         this.onComplete(charData);
     }
 }

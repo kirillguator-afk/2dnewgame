@@ -8,16 +8,15 @@ export class Engine {
         this.app = null;
         this.world = null;
         this.input = null;
-        this.gameState = 'CREATOR'; // CREATOR | PLAYING
-        this.characterData = null;
+        this.gameState = 'CREATOR';
     }
 
     async init(containerId) {
         this.app = new PIXI.Application({
             resizeTo: window,
-            backgroundColor: 0x050505,
-            antialias: true,
-            resolution: window.devicePixelRatio || 1,
+            backgroundColor: 0x1e272e,
+            antialias: false, // Отключаем для пиксель-арта
+            resolution: 1,
         });
 
         document.getElementById(containerId).appendChild(this.app.view);
@@ -26,23 +25,16 @@ export class Engine {
         this.world = new WorldManager(this.app);
         
         await this.world.loadResources();
-        
-        // Запускаем создатель персонажа
         new CharacterCreator((data) => this.startGame(data));
 
         this.app.ticker.add((delta) => this.update(delta));
     }
 
     startGame(data) {
-        this.characterData = data;
         this.gameState = 'PLAYING';
-        
-        // Обновляем HUD
-        document.getElementById('hud-name').innerText = `USER: ${data.name}`;
-        document.getElementById('hud-race').innerText = `RACE: ${data.race}`;
-        
+        document.getElementById('hud-name').innerText = data.name;
+        document.getElementById('hud-race-label').innerText = `Origin: ${data.race}`;
         this.world.setup(data);
-        console.log("Neon-Gear Engine: Playing Mode", data);
     }
 
     update(delta) {
@@ -53,9 +45,6 @@ export class Engine {
         this.world.update(dt, this.input);
         
         const pos = this.world.cameraPos;
-        document.getElementById('coords').innerHTML = `
-            X: ${Math.floor(pos.x)} Y: ${Math.floor(pos.y)}<br>
-            <span class="text-cyan-600 text-[10px]">RPM Simulation Active</span>
-        `;
+        document.getElementById('coords').innerText = `X: ${Math.floor(pos.x / 32)} Y: ${Math.floor(pos.y / 32)}`;
     }
 }

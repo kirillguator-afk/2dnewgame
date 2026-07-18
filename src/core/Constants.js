@@ -5,21 +5,23 @@ export const CONFIG = {
     WORLD_SIZE: 1000000,
     KINGDOM_CENTER: 500000,
     LAYERS: {
-        FLOOR: 0,
-        SHADOWS: 1,
-        WORLD_OBJECTS: 2, 
-        STRUCTURE_ROOF: 3,
-        UI_OVERLAY: 4
+        FLOOR: 0,           // Земля, трава
+        PATHWAYS: 1,        // Тропинки, дороги
+        SHADOWS: 2,         // Тени
+        WORLD_OBJECTS: 3,   // Игрок, NPC, Деревья, Здания (Y-Sorted)
+        STRUCTURE_ROOF: 4,  // Крыши
+        UI_OVERLAY: 5       // HUD
     }
 };
 
 export const BIOMES = {
-    CITADEL: { id: 'citadel', color: 0xecf0f1, accent: 0xf1c40f, name: 'Цитадель' },
-    HIGH_CITY: { id: 'high_city', color: 0x95a5a6, accent: 0x7f8c8d, name: 'Верхний Город' },
-    SUBURBS: { id: 'suburbs', color: 0x7f8c8d, accent: 0x2c3e50, name: 'Предместья' },
+    CITADEL: { id: 'citadel', color: 0xd1d8e0, accent: 0xa5b1c2, name: 'Цитадель' },
+    VILLAGE: { id: 'village', color: 0x588157, accent: 0x3a5a40, name: 'Поселение' },
     FARMLAND: { id: 'farmland', color: 0x8b4513, accent: 0x5d4037, name: 'Пашни' },
-    WILDERNESS: { id: 'wild', color: 0x27ae60, accent: 0x1e3a1a, name: 'Дикие Земли' },
-    ROAD: { id: 'road', color: 0x3d3126, accent: 0x2d1b0d, name: 'Тракт' }
+    FOREST: { id: 'forest', color: 0x1b2e1a, accent: 0x0d1a0d, name: 'Дремучий Лес' },
+    WILDERNESS: { id: 'wild', color: 0x344e41, accent: 0x3d5a80, name: 'Дикие Земли' },
+    ROAD: { id: 'road', color: 0x3d3126, accent: 0x2d1b0d, name: 'Тракт' },
+    DIRT_PATH: { id: 'path', color: 0x5d4037, accent: 0x3e2723, name: 'Тропа' }
 };
 
 export const RACES = {

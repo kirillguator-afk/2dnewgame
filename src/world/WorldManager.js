@@ -14,21 +14,18 @@ export class WorldManager {
         this.app = app;
         this.cameraPos = { x: 500000 * 32, y: 500000 * 32 };
         this.loadedChunks = new Map();
+        this.entities = new Map();
         
-        // Слои
+        PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
+        
         this.worldContainer = new PIXI.Container();
         this.roofContainer = new PIXI.Container();
         this.atmosContainer = new PIXI.Container();
-        this.uiLayer = new PIXI.Container();
 
         this.app.stage.addChild(this.worldContainer);
         this.app.stage.addChild(this.roofContainer);
         this.app.stage.addChild(this.atmosContainer);
-        this.app.stage.addChild(this.uiLayer);
         
-        // Шейдеры пост-обработки
-        this.applyPostProcessing();
-
         this.generator = new TerrainGenerator(Date.now());
         this.kineticSystem = new KineticSystem();
         this.vfxSystem = new VfxSystem(this.app, this.app.stage);
@@ -36,17 +33,13 @@ export class WorldManager {
         this.buildingSystem = new BuildingSystem(this);
         
         this.animTimer = 0;
+        this.applyPostProcessing();
     }
 
     applyPostProcessing() {
-        // Виньетка и цветокоррекция
         const colorMatrix = new PIXI.ColorMatrixFilter();
-        colorMatrix.contrast(0.2);
-        colorMatrix.saturate(0.1);
-        
-        // Мягкое свечение (Bloom)
-        // Примечание: В базовом PixiJS Bloom может требовать отдельного пакета, 
-        // поэтому используем ColorMatrix для "теплого" RPG вида
+        colorMatrix.contrast(0.15);
+        colorMatrix.saturate(0.05);
         this.app.stage.filters = [colorMatrix];
     }
 
@@ -60,13 +53,22 @@ export class WorldManager {
 
     setup(charData) {
         this.charData = charData;
-        this.playerFrames = CharacterFactory.createRaceTexture(this.app, charData.race, charData.color);
+        const charAssets = CharacterFactory.createRaceTexture(this.app, charData.race, charData.color);
+        this.playerFrames = charAssets.frames;
+        
+        // Shadow Sprite
+        this.playerShadow = new PIXI.Sprite(charAssets.shadow);
+        this.playerShadow.anchor.set(0.5);
+        this.playerShadow.position.set(window.innerWidth / 2, window.innerHeight / 2);
+        this.app.stage.addChildAt(this.playerShadow, CONFIG.LAYERS.PLAYER_SHADOW);
+
+        // Player Sprite
         this.player = new PIXI.Sprite(this.playerFrames[0]);
         this.player.anchor.set(0.5, 1.0);
-        this.app.stage.addChild(this.player);
-        this.player.x = window.innerWidth / 2;
-        this.player.y = window.innerHeight / 2;
-        this.moveSpeed = 250 + (charData.stats.dex * 15);
+        this.player.position.set(window.innerWidth / 2, window.innerHeight / 2);
+        this.app.stage.addChildAt(this.player, CONFIG.LAYERS.PLAYER);
+        
+        this.moveSpeed = 220 + (charData.stats.dex * 12);
         this.buildingSystem.setup();
     }
 
@@ -74,20 +76,23 @@ export class WorldManager {
         if (!this.player) return;
 
         let moving = false;
+        const prevPos = { ...this.cameraPos };
+
         if (input.isKeyDown('KeyW')) { this.cameraPos.y -= this.moveSpeed * dt; moving = true; }
         if (input.isKeyDown('KeyS')) { this.cameraPos.y += this.moveSpeed * dt; moving = true; }
         if (input.isKeyDown('KeyA')) { this.cameraPos.x -= this.moveSpeed * dt; this.player.scale.x = -1; moving = true; }
         if (input.isKeyDown('KeyD')) { this.cameraPos.x += this.moveSpeed * dt; this.player.scale.x = 1; moving = true; }
 
-        this.animTimer += dt;
         if (moving) {
-            const frame = Math.floor(this.animTimer * 10) % 2;
+            this.animTimer += dt * 8;
+            const frame = Math.floor(this.animTimer) % 2;
             this.player.texture = this.playerFrames[frame];
-            this.player.y = (window.innerHeight / 2) + Math.sin(this.animTimer * 10) * 3;
+            this.player.y = (window.innerHeight / 2) + Math.sin(this.animTimer * 1.5) * 2;
         } else {
-            // Idle animation: дыхание
+            this.animTimer += dt * 2;
             this.player.texture = this.playerFrames[0];
-            this.player.scale.y = 1.0 + Math.sin(this.animTimer * 3) * 0.02;
+            this.player.scale.y = 1.0 + Math.sin(this.animTimer) * 0.015;
+            this.player.y = window.innerHeight / 2;
         }
 
         this.atmosphere.update(dt, this.cameraPos);
@@ -107,14 +112,26 @@ export class WorldManager {
                 if (!this.loadedChunks.has(key)) this.createChunk(x, y);
             }
         }
+
+        // Оптимизированная выгрузка
+        if (this.loadedChunks.size > 16) {
+            for (const [key, chunk] of this.loadedChunks) {
+                const [cx, cy] = key.split(',').map(Number);
+                if (Math.abs(cx - curX) > 2 || Math.abs(cy - curY) > 2) {
+                    chunk.body.destroy({ children: true });
+                    chunk.roof.destroy({ children: true });
+                    this.loadedChunks.delete(key);
+                }
+            }
+        }
     }
 
     createChunk(cx, cy) {
-        const chunkCont = new PIXI.Container();
+        const bodyCont = new PIXI.Container();
         const roofCont = new PIXI.Container();
         const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
-        chunkCont.x = roofCont.x = cx * chunkPx;
-        chunkCont.y = roofCont.y = cy * chunkPx;
+        bodyCont.x = roofCont.x = cx * chunkPx;
+        bodyCont.y = roofCont.y = cy * chunkPx;
 
         for (let ty = 0; ty < CONFIG.CHUNK_SIZE; ty++) {
             for (let tx = 0; tx < CONFIG.CHUNK_SIZE; tx++) {
@@ -124,8 +141,8 @@ export class WorldManager {
                 
                 const tile = new PIXI.Sprite(this.baseTileTex);
                 tile.position.set(tx * 32, ty * 32);
-                tile.tint = data.isRoad ? 0x3d3d3d : data.biome.color;
-                chunkCont.addChild(tile);
+                tile.tint = data.isRoad ? 0x4a4e52 : data.biome.color;
+                bodyCont.addChild(tile);
 
                 if (data.structureType) {
                     const schema = BuildingTemplates.getHouseSchema(data.structureType);
@@ -135,43 +152,66 @@ export class WorldManager {
                         if (part.l === 'r') {
                             s.userData = { gx: gx + part.x, gy: gy + part.y };
                             roofCont.addChild(s);
-                        } else chunkCont.addChild(s);
+                        } else bodyCont.addChild(s);
                     });
                 }
 
                 if (data.objectType && !data.structureType) {
-                    const tex = this.envTextures[`${data.objectType}_tree_1`] || this.envTextures[`${data.objectType}_rock_1`];
+                    const suffix = this.getTexSuffix(data.objectType, (gx + gy) % 3);
+                    const tex = this.envTextures[suffix];
                     if (tex) {
                         const obj = new PIXI.Sprite(tex);
                         obj.anchor.set(0.5, 1);
                         obj.position.set(tx * 32 + 16, ty * 32 + 32);
-                        chunkCont.addChild(obj);
+                        bodyCont.addChild(obj);
                     }
                 }
             }
         }
 
-        this.worldContainer.addChild(chunkCont);
+        this.worldContainer.addChild(bodyCont);
         this.roofContainer.addChild(roofCont);
-        this.loadedChunks.set(`${cx},${cy}`, { body: chunkCont, roof: roofCont });
+        this.loadedChunks.set(`${cx},${cy}`, { body: bodyCont, roof: roofCont });
+    }
+
+    getTexSuffix(type, variation) {
+        const v = variation + 1;
+        if (type === 'forest') return v === 3 ? 'forest_flower' : `forest_tree_${v}`;
+        if (type === 'wasteland') return v === 1 ? 'wasteland_bush' : v === 2 ? 'wasteland_bones' : 'wasteland_ruin';
+        if (type === 'mountains') return v === 3 ? 'mountains_crystal' : `mountains_rock_${v}`;
+        if (type === 'swamp') return v === 3 ? 'swamp_reeds' : `swamp_mushroom_${v}`;
+        return null;
     }
 
     handleRoofTransparency() {
         const px = Math.floor(this.cameraPos.x / 32);
         const py = Math.floor(this.cameraPos.y / 32);
-        this.roofContainer.children.forEach(chunk => {
-            chunk.children.forEach(roofTile => {
-                const dist = Math.sqrt(Math.pow(roofTile.userData.gx - px, 2) + Math.pow(roofTile.userData.gy - py, 2));
-                roofTile.alpha = dist < 2 ? 0.3 : 1.0;
-            });
-        });
+        
+        // Проверяем только ближайшие к игроку чанки (центральный + соседи)
+        const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
+        const curX = Math.floor(this.cameraPos.x / chunkPx);
+        const curY = Math.floor(this.cameraPos.y / chunkPx);
+
+        for(let x = curX-1; x <= curX+1; x++) {
+            for(let y = curY-1; y <= curY+1; y++) {
+                const chunk = this.loadedChunks.get(`${x},${y}`);
+                if (chunk) {
+                    chunk.roof.children.forEach(roofTile => {
+                        const dx = roofTile.userData.gx - px;
+                        const dy = roofTile.userData.gy - py;
+                        const distSq = dx*dx + dy*dy;
+                        roofTile.alpha = distSq < 5 ? 0.25 : 1.0;
+                    });
+                }
+            }
+        }
     }
 
     renderChunks() {
-        const ox = Math.floor(-this.cameraPos.x + window.innerWidth / 2);
-        const oy = Math.floor(-this.cameraPos.y + window.innerHeight / 2);
-        this.worldContainer.position.set(ox, oy);
-        this.roofContainer.position.set(ox, oy);
-        this.atmosContainer.position.set(0, 0); // Туман зафиксирован на экране, но сдвигает tilePosition
+        const ox = -this.cameraPos.x + window.innerWidth / 2;
+        const oy = -this.cameraPos.y + window.innerHeight / 2;
+        // Используем Math.round только для финальной отрисовки, чтобы избежать щелей
+        this.worldContainer.position.set(Math.round(ox), Math.round(oy));
+        this.roofContainer.position.set(Math.round(ox), Math.round(oy));
     }
 }

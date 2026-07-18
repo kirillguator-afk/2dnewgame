@@ -11,6 +11,7 @@ export class WorldManager {
         this.app = app;
         this.cameraPos = { x: CONFIG.KINGDOM_CENTER * 32, y: CONFIG.KINGDOM_CENTER * 32 };
         this.loadedChunks = new Map();
+        this.npcs = [];
         
         PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
         
@@ -20,7 +21,6 @@ export class WorldManager {
         this.generator = new TerrainGenerator(Date.now());
         this.animTimer = 0;
         this.player = null;
-        this.npcs = [];
     }
 
     initLayers() {
@@ -38,7 +38,7 @@ export class WorldManager {
         this.envTextures = ObjectTemplates.generate(this.app, BIOMES);
         
         const g = new PIXI.Graphics();
-        g.beginFill(0x333333).drawRect(0,0,32,32);
+        g.beginFill(0xff00ff).drawRect(0,0,32,32); // Fallback texture
         this.fallbackTex = this.app.renderer.generateTexture(g);
     }
 
@@ -81,6 +81,7 @@ export class WorldManager {
         }
 
         this.updateAI(dt);
+
         this.player.x = Math.round(this.cameraPos.x);
         this.player.y = Math.round(this.cameraPos.y);
         this.player.zIndex = this.player.y;
@@ -92,7 +93,8 @@ export class WorldManager {
     }
 
     updateAI(dt) {
-        this.npcs.forEach(npc => {
+        for (let i = this.npcs.length - 1; i >= 0; i--) {
+            const npc = this.npcs[i];
             const d = npc.userData;
             d.timer -= dt;
             if (d.timer <= 0) {
@@ -106,7 +108,7 @@ export class WorldManager {
                 if (d.vx !== 0) npc.scale.x = d.vx > 0 ? 1 : -1;
             }
             npc.zIndex = Math.floor(npc.y);
-        });
+        }
     }
 
     createChunk(cx, cy) {
@@ -123,7 +125,8 @@ export class WorldManager {
                 const gy = cy * CONFIG.CHUNK_SIZE + ty;
                 const data = this.generator.getTileData(gx, gy);
                 
-                const tile = new PIXI.Sprite(this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`] || this.fallbackTex);
+                const tileTex = this.envTextures[`tile_${data.isRoad?'road':data.biome.id}`] || this.fallbackTex;
+                const tile = new PIXI.Sprite(tileTex);
                 tile.position.set(tx * 32, ty * 32);
                 floor.addChild(tile);
 
@@ -184,12 +187,14 @@ export class WorldManager {
         const chunkPx = CONFIG.CHUNK_SIZE * CONFIG.TILE_SIZE;
         const curX = Math.floor(this.cameraPos.x / chunkPx);
         const curY = Math.floor(this.cameraPos.y / chunkPx);
+
         for (let x = curX - 1; x <= curX + 1; x++) {
             for (let y = curY - 1; y <= curY + 1; y++) {
                 const key = `${x},${y}`;
                 if (!this.loadedChunks.has(key)) this.createChunk(x, y);
             }
         }
+
         if (this.loadedChunks.size > 12) {
             for (const [key, chunk] of this.loadedChunks) {
                 const [cx, cy] = key.split(',').map(Number);
@@ -197,8 +202,8 @@ export class WorldManager {
                     chunk.floor.destroy({ children: true });
                     chunk.roofs.destroy({ children: true });
                     chunk.chunkObjs.forEach(obj => {
-                        const idx = this.npcs.indexOf(obj);
-                        if(idx > -1) this.npcs.splice(idx, 1);
+                        const npcIdx = this.npcs.indexOf(obj);
+                        if (npcIdx > -1) this.npcs.splice(npcIdx, 1);
                         obj.destroy();
                     });
                     this.loadedChunks.delete(key);
@@ -208,12 +213,18 @@ export class WorldManager {
     }
 
     handleTransparency() {
+        if (!this.player) return;
         const px = Math.floor(this.cameraPos.x / 32);
         const py = Math.floor(this.cameraPos.y / 32);
-        this.layers.STRUCTURE_ROOF.children.forEach(c => c.children.forEach(r => {
-            const dx = r.userData.gx - px, dy = r.userData.gy - py;
-            r.alpha = (dx*dx + dy*dy < 9) ? 0.3 : 1.0;
-        }));
+        
+        this.layers.STRUCTURE_ROOF.children.forEach(c => {
+            c.children.forEach(r => {
+                const dx = r.userData.gx - px;
+                const dy = r.userData.gy - py;
+                const distSq = dx*dx + dy*dy;
+                r.alpha = (distSq < 12) ? 0.3 : 1.0;
+            });
+        });
     }
 
     renderWorld() {

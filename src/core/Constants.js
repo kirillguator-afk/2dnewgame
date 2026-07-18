@@ -14,7 +14,7 @@ export const CONFIG = {
 };
 
 export const BIOMES = {
-    CITADEL: { id: 'citadel', color: 0xe0e0e0, accent: 0xf1c40f, name: 'Цитадель' },
+    CITADEL: { id: 'citadel', color: 0xecf0f1, accent: 0xf1c40f, name: 'Цитадель' },
     HIGH_CITY: { id: 'high_city', color: 0x95a5a6, accent: 0x7f8c8d, name: 'Верхний Город' },
     SUBURBS: { id: 'suburbs', color: 0x7f8c8d, accent: 0x2c3e50, name: 'Предместья' },
     FARMLAND: { id: 'farmland', color: 0x8b4513, accent: 0x5d4037, name: 'Пашни' },

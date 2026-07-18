@@ -67,14 +67,14 @@ export class WorldManager {
         this.animTimer += dt;
         if (moving) {
             this.player.texture = this.playerFrames[Math.floor(this.animTimer * 10) % 2];
+            // Плавное покачивание при ходьбе
             this.player.y = Math.floor(window.innerHeight / 2 + Math.sin(this.animTimer * 15) * 2);
         } else {
             this.player.texture = this.playerFrames[0];
-            this.player.scale.y = 1.0 + Math.sin(this.animTimer * 2) * 0.02;
+            this.player.scale.y = 1.0 + Math.sin(this.animTimer * 2) * 0.02; // Дыхание
             this.player.y = Math.floor(window.innerHeight / 2);
         }
 
-        // Обновляем AI ботов
         this.updateNPCs(dt);
 
         this.player.x = Math.round(this.cameraPos.x);
@@ -94,18 +94,18 @@ export class WorldManager {
             const data = npc.userData;
             data.timer -= dt;
             if (data.timer <= 0) {
-                data.state = Math.random() > 0.5 ? 'walking' : 'idle';
-                data.timer = 2 + Math.random() * 5;
-                data.vx = data.state === 'walking' ? (Math.random() - 0.5) * 50 : 0;
-                data.vy = data.state === 'walking' ? (Math.random() - 0.5) * 50 : 0;
+                data.state = Math.random() > 0.6 ? 'walking' : 'idle';
+                data.timer = 3 + Math.random() * 6;
+                data.vx = data.state === 'walking' ? (Math.random() - 0.5) * 40 : 0;
+                data.vy = data.state === 'walking' ? (Math.random() - 0.5) * 40 : 0;
             }
 
             if (data.state === 'walking') {
                 npc.x += data.vx * dt;
                 npc.y += data.vy * dt;
-                npc.zIndex = npc.y;
                 if (data.vx !== 0) npc.scale.x = data.vx > 0 ? 1 : -1;
             }
+            npc.zIndex = Math.floor(npc.y);
         });
     }
 
@@ -128,9 +128,8 @@ export class WorldManager {
                     chunk.floor.destroy({ children: true });
                     chunk.roofs.destroy({ children: true });
                     chunk.worldObjects.forEach(obj => {
-                        if (this.npcs.includes(obj)) {
-                            this.npcs.splice(this.npcs.indexOf(obj), 1);
-                        }
+                        const index = this.npcs.indexOf(obj);
+                        if (index > -1) this.npcs.splice(index, 1);
                         obj.destroy();
                     });
                     this.loadedChunks.delete(key);
@@ -179,17 +178,32 @@ export class WorldManager {
                         }
                     });
 
-                    // Спавн жителей в домах
-                    if (gx % 12 === 0 && gy % 12 === 0) {
+                    // Спавн NPC Жителя
+                    if (gx % 15 === 0 && gy % 15 === 0) {
                         const npc = NPCFactory.createNPC(this.app, 'villager', '#3498db');
-                        npc.x = (cx * chunkPx) + tx * 32 + 16;
-                        npc.y = (cy * chunkPx) + ty * 32 + 48;
-                        npc.userData.homeX = npc.x;
-                        npc.userData.homeY = npc.y;
+                        npc.position.set((cx * chunkPx) + tx * 32 + 16, (cy * chunkPx) + ty * 32 + 40);
                         this.layers.WORLD_OBJECTS.addChild(npc);
                         this.npcs.push(npc);
                         worldObjects.push(npc);
                     }
+                }
+
+                // Спавн NPC Рыцаря на дорогах
+                if (data.isRoad && Math.random() > 0.99) {
+                    const knight = NPCFactory.createNPC(this.app, 'knight', '#ecf0f1');
+                    knight.position.set((cx * chunkPx) + tx * 32 + 16, (cy * chunkPx) + ty * 32 + 16);
+                    this.layers.WORLD_OBJECTS.addChild(knight);
+                    this.npcs.push(knight);
+                    worldObjects.push(knight);
+                }
+
+                // Спавн Торговца возле таверн
+                if (data.structureType === 'tavern' && tx === 0 && ty === 0) {
+                    const merchant = NPCFactory.createNPC(this.app, 'merchant', '#f1c40f');
+                    merchant.position.set((cx * chunkPx) + tx * 32 - 16, (cy * chunkPx) + ty * 32 + 48);
+                    this.layers.WORLD_OBJECTS.addChild(merchant);
+                    this.npcs.push(merchant);
+                    worldObjects.push(merchant);
                 }
 
                 if (data.decoType && !data.structureType) {
@@ -203,16 +217,6 @@ export class WorldManager {
                     if (data.isAnimated) { obj.animationSpeed = 0.1; obj.play(); }
                     this.layers.WORLD_OBJECTS.addChild(obj);
                     worldObjects.push(obj);
-                }
-                
-                // Спавн рыцарей на дорогах
-                if (data.isRoad && Math.random() > 0.995) {
-                    const knight = NPCFactory.createNPC(this.app, 'knight', '#ecf0f1');
-                    knight.x = (cx * chunkPx) + tx * 32 + 16;
-                    knight.y = (cy * chunkPx) + ty * 32 + 16;
-                    this.layers.WORLD_OBJECTS.addChild(knight);
-                    this.npcs.push(knight);
-                    worldObjects.push(knight);
                 }
             }
         }
